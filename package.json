@@ -1,0 +1,39 @@
+{
+  "name": "done-mutation-serialize",
+  "version": "0.0.1",
+  "main": "done-mutation-serialize.js",
+  "description": "Serialize MutationRecords so they can be patched on other documents",
+  "homepage": "https://github.com/donejs/done-mutation-serialize",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/donejs/done-mutation-serialize.git"
+  },
+  "author": {
+    "name": "DoneJS Contributors",
+    "email": "contact@bitovi.com",
+    "url": "https://donejs.com"
+  },
+  "scripts": {
+    "preversion": "npm test",
+    "version": "git commit -am \"Update version number\"",
+    "postpublish": "git push --tags && git push",
+    "testee": "testee test.html --browsers firefox",
+    "test": "npm run jshint && npm run testee",
+    "jshint": "jshint ./*.js --config",
+    "release:patch": "npm version patch && npm publish",
+    "release:minor": "npm version minor && npm publish",
+    "release:major": "npm version major && npm publish"
+  },
+  "keywords": [
+    "donejs",
+    "donejs-plugin",
+    "mutationobserver"
+  ],
+  "devDependencies": {
+    "jshint": "^2.9.1",
+    "steal": "^2.0.0",
+    "steal-qunit": "^1.0.1",
+    "testee": "^0.7.0"
+  },
+  "license": "MIT"
+}
