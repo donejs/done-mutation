@@ -1,9 +1,30 @@
-import QUnit from 'steal-qunit';
-import plugin from './done-mutation-serialize';
+var QUnit = require("steal-qunit");
+var serialize = require("./done-mutation-serialize");
+var helpers = require("./test-helpers");
 
-QUnit.module('done-mutation-serialize');
+QUnit.module("done-mutation-serialize", {
+	afterEach: function(){
+		helpers.fixture.clear();
+	}
+});
 
-QUnit.test('Initialized the plugin', function(){
-  QUnit.equal(typeof plugin, 'function');
-  QUnit.equal(plugin(), 'This is the done-mutation-serialize plugin');
+QUnit.test("Basics", function(assert){
+	var done = assert.async();
+
+	var root = document.createElement("div");
+	var child1 = document.createElement("article");
+	var child2 = document.createElement("section");
+	root.appendChild(child1);
+	root.appendChild(child2);
+	helpers.fixture.el().appendChild(root);
+
+	var mo = new MutationObserver(function(records) {
+		var instr = serialize.writeArray(records);
+
+		assert.ok(instr.length);
+		done();
+	});
+
+	mo.observe(root, { childList: true, subtree: true });
+	child1.appendChild(document.createTextNode("foo"));
 });
