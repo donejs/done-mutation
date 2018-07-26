@@ -1,29 +1,30 @@
-const mutationSerializer = require("./done-mutation-serialize");
+const Serializer = require("./done-mutation-serialize");
 const tags = require("./tags");
 
-exports.callback = function(records) {
-	console.group("Mutations");
-	for(let mutation of deserialize(mutationSerializer.bytes(records))) {
-		console.log(mutation);
-	}
-	console.groupEnd();
-};
-
 exports.element = function(root) {
-	let mo = new MutationObserver(exports.callback);
-	mo.observe(root, { childList: true, subtree: true });
+	let serializer = new Serializer(root);
+
+	function callback(records) {
+		console.group("Mutations");
+		for(let mutation of deserialize(serializer.bytes(records))) {
+			console.log(mutation);
+		}
+		console.groupEnd();
+	}
+
+	let mo = new MutationObserver(callback);
+	mo.observe(root, { characterData: true, childList: true, subtree: true });
 	return mo;
 };
 
 function* deserialize(bytes) {
 	let mutation;
-	let inMutation = false;
 
 	for(let byte of bytes) {
 		let index, ref;
 
 		switch(extractTag(byte)) {
-			case tags.Null:
+			case tags.Zero:
 				break;
 			case tags.Insert:
 				index = extractValue(byte);
@@ -42,6 +43,17 @@ function* deserialize(bytes) {
 				mutation = {type: "move", from, index, ref};
 				yield mutation;
 				break;
+			case tags.Remove:
+				index = extractValue(byte);
+				mutation = {type: "remove", index};
+				yield mutation;
+				break;
+			case tags.Text:
+				index = extractValue(byte);
+				let value = extractString(bytes);
+				mutation = {type: "text", index, value};
+				yield mutation;
+				break;
 			default:
 				console.log("Tag", extractTag(byte), extractValue(byte));
 				break;
@@ -57,7 +69,7 @@ function extractString(bytes) {
 			case tags.String:
 				string += String.fromCharCode(extractValue(value));
 				break;
-			case tags.Null:
+			case tags.Zero:
 				return string;
 		}
 	}

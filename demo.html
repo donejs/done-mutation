@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<title>A demo</title>
+<style>
+	iframe {
+		border-width: 1px;
+		border-style: solid;
+		border-color: tomato;
+	}
+</style>
+
+<script src="node_modules/steal/steal.js"></script>
+<script type="steal-module">
+	var Serializer = require("~/done-mutation-serialize");
+	var log = require("~/log");
+	var patch = require("~/patch");
+
+	window.sourceDoc = document.querySelector("#doc1").contentDocument;
+	window.cloneDoc = document.querySelector("#doc2").contentDocument;
+
+	log.element(sourceDoc.documentElement);
+
+	var serializer = new Serializer(sourceDoc.documentElement);
+
+	new MutationObserver(records => {
+		let bytes = serializer.bytes(records);
+		patch.apply(cloneDoc.documentElement, bytes);
+	}).observe(sourceDoc.documentElement, {
+		characterData: true,
+		childList: true,
+		subtree: true
+	});
+
+</script>
+
+<iframe id="doc1" src="./demo-doc.html"></iframe>
+<iframe id="doc2" src="./demo-doc.html"></iframe>

@@ -1,11 +1,12 @@
 const Instructions = {
-	Null: 0,
+	Zero: 0,
 	Insert: 1,
 	Remove: 2,
 	Move: 3,
-	SetAttr: 4,
-	RemoveAttr: 5,
-	String: 6
+	Text: 4,
+	SetAttr: 5,
+	RemoveAttr: 6,
+	String: 7
 };
 
 module.exports = Instructions;

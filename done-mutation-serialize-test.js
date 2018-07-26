@@ -1,7 +1,9 @@
 var QUnit = require("steal-qunit");
-var serialize = require("./done-mutation-serialize");
+var Serializer = require("./done-mutation-serialize");
 var helpers = require("./test-helpers");
 var log = require("./log");
+
+var NodeIndex = require("./index");
 
 QUnit.module("done-mutation-serialize", {
 	afterEach: function(){
@@ -21,11 +23,12 @@ QUnit.test("Basics", function(assert){
 	root.appendChild(child3);
 	helpers.fixture.el().appendChild(root);
 
+	var serializer = new Serializer(root);
 	var logger = log.element(root);
 
 	var mo = new MutationObserver(function(records) {
 		let instr = [];
-		for(let b of serialize.bytes(records)) {
+		for(let b of serializer.bytes(records)) {
 			instr.push(b);
 		}
 
