@@ -2,7 +2,6 @@ var QUnit = require("steal-qunit");
 var MutationEncoder = require("./encoder");
 var MutationPatcher = require("./patch");
 var helpers = require("./test/test-helpers");
-var log = require("./log");
 
 QUnit.module("TextNodes", {
 	afterEach: function(){

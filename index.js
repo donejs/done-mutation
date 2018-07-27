@@ -62,7 +62,6 @@ class NodeIndex {
 			return this.map.get(node);
 		}
 
-		let cont = true;
 		do {
 			node = node.parentNode;
 

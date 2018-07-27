@@ -48,11 +48,10 @@ class MutationPatcher {
 					parent.insertBefore(child, sibling);
 					break;
 				case tags.Move:
-					index = extractValue(byte);
+					/*index = extractValue(byte);
 					let from = iter.next().value;
-					ref = iter.next().value;
-					mutation = {type: "move", from, index, ref};
-					break;
+					ref = iter.next().value;*/
+					throw new Error('Moves have not been implemented');
 				case tags.Remove:
 					index = extractValue(byte);
 					let el = walker.next(index).value;
