@@ -1,12 +1,12 @@
 {
-  "name": "done-mutation-serialize",
+  "name": "done-mutation",
   "version": "0.0.1",
-  "main": "done-mutation-serialize.js",
-  "description": "Serialize MutationRecords so they can be patched on other documents",
-  "homepage": "https://github.com/donejs/done-mutation-serialize",
+  "main": "done-mutation.js",
+  "description": "Encodes MutationRecords so they can be patched on other documents",
+  "homepage": "https://github.com/donejs/done-mutation",
   "repository": {
     "type": "git",
-    "url": "git://github.com/donejs/done-mutation-serialize.git"
+    "url": "git://github.com/donejs/done-mutation.git"
   },
   "author": {
     "name": "DoneJS Contributors",

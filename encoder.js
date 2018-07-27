@@ -3,7 +3,7 @@ const NodeIndex = require("./index");
 
 const TAG_SIZE = 3;
 
-function encode(value, tag) {
+function tagValue(value, tag) {
 	return (value << TAG_SIZE) | tag;
 }
 
@@ -54,12 +54,16 @@ function* encodeNode(node) {
 	yield tags.Zero;
 }
 
-class Serializer {
+class MutationEncoder {
 	constructor(root) {
 		this.index = new NodeIndex(root);
 	}
 
-	*bytes(records) {
+	encode(records) {
+		return Uint16Array.from(this.mutations(records));
+	}
+
+	*mutations(records) {
 		const index = this.index;
 		const movedNodes = new WeakSet();
 
@@ -77,7 +81,7 @@ class Serializer {
 							continue;
 						}
 
-						yield encode(index.for(node.parentNode), tags.Insert);
+						yield tagValue(index.for(node.parentNode), tags.Insert);
 						yield getChildIndex(node.parentNode, node); // ref
 						yield* encodeNode(node);
 					}
@@ -87,16 +91,16 @@ class Serializer {
 
 						if(nodeMoved(node, j, records)) {
 							movedNodes.add(node);
-							yield encode(index.for(node), tags.Move); // index
+							yield tagValue(index.for(node), tags.Move); // index
 							yield 1; // parent index
 							yield 0; // ref
 						} else {
-							yield encode(index.for(node), tags.Remove);
+							yield tagValue(index.for(node), tags.Remove);
 						}
 					}
 					break;
 				case "characterData":
-					yield encode(index.for(record.target), tags.Text);
+					yield tagValue(index.for(record.target), tags.Text);
 					yield* encodeString(record.target.nodeValue);
 					break;
 			}
@@ -133,4 +137,4 @@ function nodeMoved(node, recordIndex, records) {
 }
 
 
-module.exports = Serializer;
+module.exports = MutationEncoder;

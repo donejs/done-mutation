@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en">
-<title>A demo</title>
+<title>done-mutation demo</title>
 <style>
 	body {
 		font-family: 'Proxima Nova Soft', 'Helvetica Neue', sans-serif;
@@ -35,20 +35,21 @@
 
 <script src="node_modules/steal/steal.js"></script>
 <script type="steal-module">
-	var Serializer = require("~/done-mutation-serialize");
-	var log = require("~/log");
-	var patch = require("~/patch");
+	const MutationEncoder = require("~/encoder");
+	const log = require("~/log");
+	const MutationPatcher = require("~/patch");
 
 	window.sourceDoc = document.querySelector("#doc1").contentDocument;
 	window.cloneDoc = document.querySelector("#doc2").contentDocument;
 
 	log.element(sourceDoc.documentElement);
 
-	var serializer = new Serializer(sourceDoc.documentElement);
+	let encoder = new MutationEncoder(sourceDoc.documentElement);
+	let patcher = new MutationPatcher(cloneDoc.documentElement);
 
 	new MutationObserver(records => {
-		let bytes = serializer.bytes(records);
-		patch.apply(cloneDoc.documentElement, bytes);
+		let bytes = encoder.mutations(records);
+		patcher.patch(bytes);
 	}).observe(sourceDoc.documentElement, {
 		characterData: true,
 		childList: true,

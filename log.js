@@ -1,13 +1,16 @@
 const { decodeString } = require("./decode");
-const Serializer = require("./done-mutation-serialize");
+const MutationEncoder = require("./encoder");
+const MutationDecoder = require("./decoder");
 const tags = require("./tags");
 
 exports.element = function(root) {
-	let serializer = new Serializer(root);
+	let encoder = new MutationEncoder(root);
+	let decoder = new MutationDecoder(root.ownerDocument);
 
 	function callback(records) {
 		console.group("Mutations");
-		for(let mutation of deserialize(serializer.bytes(records))) {
+		let bytes = encoder.encode(records);
+		for(let mutation of decoder.decode(bytes)) {
 			console.log(mutation);
 		}
 		console.groupEnd();
