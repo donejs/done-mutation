@@ -1,43 +1,56 @@
 var QUnit = require("steal-qunit");
 var MutationEncoder = require("./encoder");
+var MutationPatcher = require("./patch");
 var helpers = require("./test/test-helpers");
-var log = require("./log");
 
-QUnit.module("done-mutation", {
+QUnit.module("TextNodes", {
 	afterEach: function(){
 		helpers.fixture.clear();
 	}
 });
 
-QUnit.test("Basics", function(assert){
+QUnit.test("Setting nodeValue", function(assert){
 	var done = assert.async();
 
 	var root = document.createElement("div");
-	var child1 = document.createElement("article");
-	var child2 = document.createElement("section");
-	var child3 = document.createElement("ul");
-	root.appendChild(child1);
-	root.appendChild(child2);
-	root.appendChild(child3);
+	var article = document.createElement("article");
+	article.appendChild(document.createTextNode("Article"));
+	root.appendChild(article);
 	helpers.fixture.el().appendChild(root);
+	var clone = root.cloneNode(true);
 
 	var encoder = new MutationEncoder(root);
-	var logger = log.element(root);
+	var patcher = new MutationPatcher(clone);
 
 	var mo = new MutationObserver(function(records) {
-		let instr = [];
-		for(let b of encoder.encode(records)) {
-			instr.push(b);
-		}
-
-		console.log(instr);
-
-		assert.ok(instr.length);
-		logger.disconnect();
+		patcher.patch(encoder.encode(records));
+		assert.equal(clone.textContent, "A title", "Patched correctly");
 		done();
 	});
 
-	mo.observe(root, { childList: true, subtree: true });
-	child1.appendChild(document.createTextNode("foo"));
-	root.insertBefore(child3, child1);
+	mo.observe(root, { childList: true, subtree: true, characterData: true });
+	article.firstChild.nodeValue = "A title";
+});
+
+QUnit.skip("Setting textContent", function(assert){
+	var done = assert.async();
+
+	var root = document.createElement("div");
+	var article = document.createElement("article");
+	article.appendChild(document.createTextNode("Article"));
+	root.appendChild(article);
+	helpers.fixture.el().appendChild(root);
+	var clone = root.cloneNode(true);
+
+	var encoder = new MutationEncoder(root);
+	var patcher = new MutationPatcher(clone);
+
+	var mo = new MutationObserver(function(records) {
+		patcher.patch(encoder.encode(records));
+		assert.equal(clone.textContent, "A title", "Patched correctly");
+		done();
+	});
+
+	mo.observe(root, { childList: true, subtree: true, characterData: true });
+	article.textContent = "A title";
 });

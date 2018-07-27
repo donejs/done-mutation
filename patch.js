@@ -26,12 +26,13 @@ class MutationPatcher {
 	}
 
 	patch(bytes) {
+		const iter = bytes[Symbol.iterator]();
 		const root = this.root;
 		const document = root.ownerDocument;
 		const walker = walk(root, 0);
 		walker.next();
 
-		for(let byte of bytes) {
+		for(let byte of iter) {
 			let index, ref;
 
 			switch(extractTag(byte)) {
@@ -39,19 +40,18 @@ class MutationPatcher {
 					break;
 				case tags.Insert:
 					index = extractValue(byte);
-					ref = bytes.next().value;
-					let nodeType = bytes.next().value;
-					let child = decodeNode(bytes, nodeType, document);
+					ref = iter.next().value;
+					let nodeType = iter.next().value;
+					let child = decodeNode(iter, nodeType, document);
 					let parent = walker.next(index).value;
 					let sibling = getSibling(parent, ref);
 					parent.insertBefore(child, sibling);
 					break;
 				case tags.Move:
-					index = extractValue(byte);
-					let from = bytes.next().value;
-					ref = bytes.next().value;
-					mutation = {type: "move", from, index, ref};
-					break;
+					/*index = extractValue(byte);
+					let from = iter.next().value;
+					ref = iter.next().value;*/
+					throw new Error('Moves have not been implemented');
 				case tags.Remove:
 					index = extractValue(byte);
 					let el = walker.next(index).value;
@@ -59,7 +59,7 @@ class MutationPatcher {
 					break;
 				case tags.Text:
 					index = extractValue(byte);
-					let value = decodeString(bytes);
+					let value = decodeString(iter);
 					let node = walker.next(index).value;
 					node.nodeValue = value;
 					break;
