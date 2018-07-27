@@ -1,9 +1,7 @@
 var QUnit = require("steal-qunit");
 var MutationEncoder = require("./encoder");
-var helpers = require("./test-helpers");
+var helpers = require("./test/test-helpers");
 var log = require("./log");
-
-var NodeIndex = require("./index");
 
 QUnit.module("done-mutation", {
 	afterEach: function(){
