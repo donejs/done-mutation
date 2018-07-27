@@ -74,6 +74,21 @@ class MutationEncoder {
 
 			switch(record.type) {
 				case "childList":
+					for(j = 0, jLen = record.removedNodes.length; j < jLen; j++) {
+						let node = record.removedNodes[j];
+
+						if(nodeMoved(node, j, records)) {
+							// TODO implement node moving
+
+							movedNodes.add(node);
+							yield tagValue(index.for(node), tags.Move); // index
+							yield 1; // parent index
+							yield 0; // ref
+						} else {
+							yield tagValue(index.for(node), tags.Remove);
+						}
+					}
+
 					for (let node of record.addedNodes) {
 						// If this node was moved we have already done a move instruction
 						if(movedNodes.has(node)) {
@@ -86,18 +101,6 @@ class MutationEncoder {
 						yield* encodeNode(node);
 					}
 
-					for(j = 0, jLen = record.removedNodes.length; j < jLen; j++) {
-						let node = record.removedNodes[j];
-
-						if(nodeMoved(node, j, records)) {
-							movedNodes.add(node);
-							yield tagValue(index.for(node), tags.Move); // index
-							yield 1; // parent index
-							yield 0; // ref
-						} else {
-							yield tagValue(index.for(node), tags.Remove);
-						}
-					}
 					break;
 				case "characterData":
 					yield tagValue(index.for(record.target), tags.Text);
