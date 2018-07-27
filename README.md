@@ -1,6 +1,8 @@
 # done-mutation-serialize
 
-[![Build Status](https://travis-ci.org/donejs/done-mutation-serialize.svg?branch=master)](https://travis-ci.org/donejs/done-mutation-serialize)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/donejs/done-mutation/blob/master/LICENSE)
+[![npm version](https://badge.fury.io/js/done-mutation.svg)](https://www.npmjs.com/package/done-mutation)
+[![Build Status](https://travis-ci.org/donejs/done-mutation.svg?branch=master)](https://travis-ci.org/donejs/done-mutation)
 
 Serialize MutationRecords so they can be patched on other documents
 
