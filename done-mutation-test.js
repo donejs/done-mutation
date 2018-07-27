@@ -32,7 +32,7 @@ QUnit.test("Setting nodeValue", function(assert){
 	article.firstChild.nodeValue = "A title";
 });
 
-QUnit.skip("Setting textContent", function(assert){
+QUnit.test("Setting textContent", function(assert){
 	var done = assert.async();
 
 	var root = document.createElement("div");

@@ -23,14 +23,18 @@ function* walk(root, nextIndex) {
 class MutationPatcher {
 	constructor(root) {
 		this.root = root;
+		this._startWalker();
+	}
+
+	_startWalker() {
+		this.walker = walk(this.root, 0);
+		this.walker.next();
 	}
 
 	patch(bytes) {
 		const iter = bytes[Symbol.iterator]();
 		const root = this.root;
 		const document = root.ownerDocument;
-		const walker = walk(root, 0);
-		walker.next();
 
 		for(let byte of iter) {
 			let index, ref;
@@ -43,7 +47,7 @@ class MutationPatcher {
 					ref = iter.next().value;
 					let nodeType = iter.next().value;
 					let child = decodeNode(iter, nodeType, document);
-					let parent = walker.next(index).value;
+					let parent = this.walker.next(index).value;
 					let sibling = getSibling(parent, ref);
 					parent.insertBefore(child, sibling);
 					break;
@@ -54,13 +58,14 @@ class MutationPatcher {
 					throw new Error('Moves have not been implemented');
 				case tags.Remove:
 					index = extractValue(byte);
-					let el = walker.next(index).value;
+					let el = this.walker.next(index).value;
 					el.parentNode.removeChild(el);
+					this._startWalker();
 					break;
 				case tags.Text:
 					index = extractValue(byte);
 					let value = decodeString(iter);
-					let node = walker.next(index).value;
+					let node = this.walker.next(index).value;
 					node.nodeValue = value;
 					break;
 				default:
