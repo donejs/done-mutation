@@ -1,4 +1,3 @@
-const { decodeString } = require("./decode");
 const MutationEncoder = require("./encoder");
 const MutationDecoder = require("./decoder");
 const tags = require("./tags");
@@ -78,41 +77,4 @@ function decodeNode(bytes) {
 		default:
 			throw new Error(`Unable to decode nodeType ${nodeType}`);
 	}
-}
-
-function decodeElement(bytes) {
-	let el = document.createElement(decodeString(bytes));
-
-	let attributeName = decodeString(bytes);
-	while(attributeName) {
-		attributeName = false;
-		console.log("NAME", attributeName, "VALUE", decodeString(bytes));
-		// TODO set it
-	}
-
-	let parent = el;
-	let nodeType = bytes.next().value;
-	while(nodeType !== tags.Zero) {
-		let el;
-		switch(nodeType) {
-			case 3:
-				el = document.createTextNode(decodeString(bytes));
-				break;
-			case 1:
-				el = decodeElement(bytes);
-				break;
-		}
-		parent.appendChild(el);
-		nodeType = bytes.next().value;
-	}
-
-	return el;
-}
-
-function extractTag(value) {
-	return value & ((1 << 3) - 1);
-}
-
-function extractValue(value) {
-	return value >>> 3;
 }

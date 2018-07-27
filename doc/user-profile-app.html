@@ -6,6 +6,7 @@
 		font-family: 'Proxima Nova Soft', 'Helvetica Neue', sans-serif;
 	}
 	my-app { display: block; }
+	fieldset { border-style: none; }
 </style>
 
 <my-app></my-app>
@@ -18,16 +19,25 @@
 		view: `
 			<h1>User Profile</h1>
 
-			<input type="text" value:bind="name">
-			<p>Hello {{name}}</p>
+			<h2>User Information</h2>
+			<p><strong>{{name}}</strong> is a user of this app.</p>
 
 			{{#if(isAdmin)}}
 				<h2>Administrator</h2>
 			{{/if}}
+
+			<h2>Edit User</h2>
+			<fieldset>
+				<label for="name">Name</label>
+				<input type="text" value:bind="name" name="name">
+
+				<label for="is-admin">Is Administrator?</label>
+				<input type="checkbox" checked:bind="isAdmin" name="is-admin">
+			</fieldset>
 		`,
 		ViewModel: {
 			name: {
-				default: "world"
+				default: "Unnamed"
 			},
 			isAdmin: {
 				default: false
