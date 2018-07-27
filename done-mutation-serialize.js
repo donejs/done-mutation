@@ -1,10 +1,57 @@
-const Instructions = require("./tags");
+const tags = require("./tags");
 const NodeIndex = require("./index");
 
 const TAG_SIZE = 3;
 
 function encode(value, tag) {
 	return (value << TAG_SIZE) | tag;
+}
+
+function* encodeString(text) {
+	for(let i = 0, len = text.length; i < len; i++) {
+		yield text.charCodeAt(i);
+	}
+	yield tags.Zero;
+}
+
+function* encodeElement(element) {
+	// Tag Name
+	yield* encodeString(element.tagName.toLowerCase());
+
+	// Attributes
+	for(let attribute of element.attributes) {
+		yield* encodeString(attribute.name);
+		yield* encodeString(attribute.value);
+	}
+	yield tags.Zero;
+
+	// Children
+	let child = element.firstChild;
+	while(child) {
+		yield* encodeNode(child);
+		yield tags.Zero;
+
+		child = child.nextSibling;
+	}
+	yield tags.Zero;
+}
+
+function* encodeNode(node) {
+	yield node.nodeType;
+
+	switch(node.nodeType) {
+		case 1:
+			yield* encodeElement(node);
+			break;
+		case 3:
+			yield* encodeString(node.nodeValue);
+			break;
+		default:
+			throw new Error(`Cannot yet encode nodeType ${node.nodeType}`);
+	}
+
+	// End of element
+	yield tags.Zero;
 }
 
 class Serializer {
@@ -30,21 +77,9 @@ class Serializer {
 							continue;
 						}
 
-						yield encode(index.for(node), Instructions.Insert);
-						yield 0; // ref
-						yield node.nodeType;
-						switch(node.nodeType) {
-							case 3:
-								let text = node.nodeValue;
-								for(let i = 0, len = text.length; i < len; i++) {
-									yield encode(text.charCodeAt(i), Instructions.String);
-								}
-								yield encode(0, Instructions.Zero);
-								break;
-							default:
-								yield node;
-								break;
-						}
+						yield encode(index.for(node.parentNode), tags.Insert);
+						yield getChildIndex(node.parentNode, node); // ref
+						yield* encodeNode(node);
 					}
 
 					for(j = 0, jLen = record.removedNodes.length; j < jLen; j++) {
@@ -52,27 +87,36 @@ class Serializer {
 
 						if(nodeMoved(node, j, records)) {
 							movedNodes.add(node);
-							yield encode(index.for(node), Instructions.Move); // index
+							yield encode(index.for(node), tags.Move); // index
 							yield 1; // parent index
 							yield 0; // ref
 						} else {
-							yield encode(index.for(node), Instructions.Remove);
+							yield encode(index.for(node), tags.Remove);
 						}
 					}
 					break;
 				case "characterData":
-					let text = record.target.nodeValue;
-					yield encode(index.for(record.target), Instructions.Text);
-					for(let i = 0, len = text.length; i < len; i++) {
-						yield encode(text.charCodeAt(i), Instructions.String);
-					}
-					yield encode(0, Instructions.Zero);
+					yield encode(index.for(record.target), tags.Text);
+					yield* encodeString(record.target.nodeValue);
 					break;
 			}
 
 
 		}
 	}
+}
+
+function getChildIndex(parent, child) {
+	let index = 0;
+	let node = parent.firstChild;
+	while(node) {
+		if(node === child) {
+			return index;
+		}
+		index++;
+		node = node.nextSibling;
+	}
+	return -1;
 }
 
 function nodeMoved(node, recordIndex, records) {

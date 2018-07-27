@@ -1,4 +1,4 @@
-const { extractString, extractTag, extractValue } = require("./decode");
+const { decodeNode, decodeString, extractTag, extractValue } = require("./decode");
 const tags = require("./tags");
 
 function* walk(root, nextIndex) {
@@ -35,27 +35,25 @@ exports.apply = function(root, bytes) {
 				index = extractValue(byte);
 				ref = bytes.next().value;
 				let nodeType = bytes.next().value;
-				mutation = {type: "insert", index, ref, nodeType};
-				if(nodeType === 3) {
-					mutation.nodeValue = extractString(bytes);
-				}
-				//yield mutation;
+				let child = decodeNode(bytes, nodeType, document);
+				let parent = walker.next(index).value;
+				let sibling = getSibling(parent, ref);
+				parent.insertBefore(child, sibling);
 				break;
 		  case tags.Move:
 				index = extractValue(byte);
 				let from = bytes.next().value;
 				ref = bytes.next().value;
 				mutation = {type: "move", from, index, ref};
-				//yield mutation;
 				break;
 			case tags.Remove:
 				index = extractValue(byte);
-				mutation = {type: "remove", index};
-				//yield mutation;
+				let el = walker.next(index).value;
+				el.parentNode.removeChild(el);
 				break;
 			case tags.Text:
 				index = extractValue(byte);
-				let value = extractString(bytes);
+				let value = decodeString(bytes);
 				let node = walker.next(index).value;
 				node.nodeValue = value;
 				break;
@@ -64,4 +62,13 @@ exports.apply = function(root, bytes) {
 				break;
 		}
 	}
+}
+
+function getSibling(parent, index) {
+	let i = 0, child = parent.firstChild;
+	while(i < index) {
+		i++;
+		child = child.nextSibling;
+	}
+	return child;
 }

@@ -7,6 +7,16 @@
 		border-style: solid;
 		border-color: tomato;
 	}
+
+	#apps {
+		display: flex;
+	}
+
+	#apps > * {
+		flex: 1;
+		margin: 5px;
+		min-height: 300px;
+	}
 </style>
 
 <script src="node_modules/steal/steal.js"></script>
@@ -33,5 +43,7 @@
 
 </script>
 
-<iframe id="doc1" src="./demo-doc.html"></iframe>
-<iframe id="doc2" src="./demo-doc.html"></iframe>
+<main id="apps">
+	<iframe id="doc1" src="./demo-doc.html"></iframe>
+	<iframe id="doc2" src="./demo-doc.html"></iframe>
+</main>

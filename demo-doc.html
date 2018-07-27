@@ -16,10 +16,17 @@
 			<h1>My app</h1>
 
 			<p>Hello {{name}}</p>
+
+			{{#if(isAdmin)}}
+				<h2>Administrator</h2>
+			{{/if}}
 		`,
 		ViewModel: {
 			name: {
 				default: "world"
+			},
+			isAdmin: {
+				default: false
 			},
 			connectedCallback(el) {
 				el.viewModel = this;

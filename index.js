@@ -67,7 +67,7 @@ class NodeIndex {
 			node = node.parentNode;
 
 			if(this.map.has(node)) {
-				this.walk(node, this.map.get(node));
+				this.walk(node, this.map.get(node) + 1);
 				return this.map.get(searchNode);
 			}
 		} while(node !== root);

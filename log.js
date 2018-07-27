@@ -1,3 +1,4 @@
+const { decodeString } = require("./decode");
 const Serializer = require("./done-mutation-serialize");
 const tags = require("./tags");
 
@@ -32,7 +33,9 @@ function* deserialize(bytes) {
 				let nodeType = bytes.next().value;
 				mutation = {type: "insert", index, ref, nodeType};
 				if(nodeType === 3) {
-					mutation.nodeValue = extractString(bytes);
+					mutation.nodeValue = decodeString(bytes);
+				} else {
+					mutation.element = decodeElement(bytes);
 				}
 				yield mutation;
 				break;
@@ -50,7 +53,7 @@ function* deserialize(bytes) {
 				break;
 			case tags.Text:
 				index = extractValue(byte);
-				let value = extractString(bytes);
+				let value = decodeString(bytes);
 				mutation = {type: "text", index, value};
 				yield mutation;
 				break;
@@ -61,18 +64,46 @@ function* deserialize(bytes) {
 	}
 }
 
-function extractString(bytes) {
-	let string = "";
-	while(true) {
-		let { value } = bytes.next();
-		switch(extractTag(value)) {
-			case tags.String:
-				string += String.fromCharCode(extractValue(value));
-				break;
-			case tags.Zero:
-				return string;
-		}
+function decodeNode(bytes) {
+	let nodeType = bytes.next().value;
+
+	switch(nodeType) {
+		case 1:
+			return decodeElement(bytes);
+		case 3:
+			return decodeString(bytes);
+		default:
+			throw new Error(`Unable to decode nodeType ${nodeType}`);
 	}
+}
+
+function decodeElement(bytes) {
+	let el = document.createElement(decodeString(bytes));
+
+	let attributeName = decodeString(bytes);
+	while(attributeName) {
+		attributeName = false;
+		console.log("NAME", attributeName, "VALUE", decodeString(bytes));
+		// TODO set it
+	}
+
+	let parent = el;
+	let nodeType = bytes.next().value;
+	while(nodeType !== tags.Zero) {
+		let el;
+		switch(nodeType) {
+			case 3:
+				el = document.createTextNode(decodeString(bytes));
+				break;
+			case 1:
+				el = decodeElement(bytes);
+				break;
+		}
+		parent.appendChild(el);
+		nodeType = bytes.next().value;
+	}
+
+	return el;
 }
 
 function extractTag(value) {
