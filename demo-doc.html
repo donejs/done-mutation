@@ -2,6 +2,9 @@
 <html lang="en">
 <title>My app</title>
 <style>
+	body {
+		font-family: 'Proxima Nova Soft', 'Helvetica Neue', sans-serif;
+	}
 	my-app { display: block; }
 </style>
 
@@ -13,8 +16,9 @@
 	Component.extend({
 		tag: "my-app",
 		view: `
-			<h1>My app</h1>
+			<h1>User Profile</h1>
 
+			<input type="text" value:bind="name">
 			<p>Hello {{name}}</p>
 
 			{{#if(isAdmin)}}

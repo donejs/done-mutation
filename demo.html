@@ -2,20 +2,34 @@
 <html lang="en">
 <title>A demo</title>
 <style>
+	body {
+		font-family: 'Proxima Nova Soft', 'Helvetica Neue', sans-serif;
+	}
+
 	iframe {
 		border-width: 1px;
 		border-style: solid;
 		border-color: tomato;
+		width: 100%;
+		min-height: 300px;
 	}
 
 	#apps {
 		display: flex;
 	}
 
-	#apps > * {
+	.app {
 		flex: 1;
 		margin: 5px;
-		min-height: 300px;
+		position: relative;
+	}
+
+	.app .label {
+		position: absolute;
+		top: 8px;
+		right: 8px;
+		background: rgba(0, 0, 0, 0.25);
+		padding: 4px 8px;
 	}
 </style>
 
@@ -44,6 +58,12 @@
 </script>
 
 <main id="apps">
-	<iframe id="doc1" src="./demo-doc.html"></iframe>
-	<iframe id="doc2" src="./demo-doc.html"></iframe>
+	<div class="app">
+		<span class="label">Source</span>
+		<iframe id="doc1" src="./demo-doc.html"></iframe>
+	</div>
+	<div class="app">
+		<span class="label">Destination</span>
+		<iframe id="doc2" src="./demo-doc.html"></iframe>
+	</div>
 </main>
