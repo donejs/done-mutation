@@ -49,6 +49,13 @@ class MutationDecoder {
 					mutation = {type: "text", index, value};
 					yield mutation;
 					break;
+				case tags.SetAttr:
+					index = extractValue(byte);
+					let attrName = decodeString(iter);
+					let newValue = decodeString(iter);
+					mutation = {type: "set attribute", attrName, newValue};
+					yield mutation;
+					break;
 				default:
 					console.log("Tag", extractTag(byte), extractValue(byte));
 					break;

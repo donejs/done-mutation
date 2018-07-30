@@ -77,8 +77,6 @@ class MutationEncoder {
 					for(j = 0, jLen = record.removedNodes.length; j < jLen; j++) {
 						let node = record.removedNodes[j];
 
-
-
 						if(false && nodeMoved(node, j, records)) {
 							// TODO implement node moving
 
@@ -114,6 +112,11 @@ class MutationEncoder {
 				case "characterData":
 					yield tagValue(index.for(record.target), tags.Text);
 					yield* encodeString(record.target.nodeValue);
+					break;
+				case "attributes":
+					yield tagValue(index.for(record.target), tags.SetAttr);
+					yield* encodeString(record.attributeName);
+					yield* encodeString(record.target.getAttribute(record.attributeName));
 					break;
 			}
 

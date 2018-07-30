@@ -37,7 +37,7 @@ class MutationPatcher {
 		const document = root.ownerDocument;
 
 		for(let byte of iter) {
-			let index, ref, child;
+			let index, ref, node, child;
 
 			switch(extractTag(byte)) {
 				case tags.Zero:
@@ -67,8 +67,15 @@ class MutationPatcher {
 				case tags.Text:
 					index = extractValue(byte);
 					let value = decodeString(iter);
-					let node = this.walker.next(index).value;
+					node = this.walker.next(index).value;
 					node.nodeValue = value;
+					break;
+				case tags.SetAttr:
+					index = extractValue(byte);
+					node = this.walker.next(index).value;
+					let attrName = decodeString(iter);
+					let attrValue = decodeString(iter);
+					node.setAttribute(attrName, attrValue);
 					break;
 				default:
 					console.log("Tag", extractTag(byte), extractValue(byte));
