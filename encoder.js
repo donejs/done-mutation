@@ -114,9 +114,15 @@ class MutationEncoder {
 					yield* encodeString(record.target.nodeValue);
 					break;
 				case "attributes":
-					yield tagValue(index.for(record.target), tags.SetAttr);
-					yield* encodeString(record.attributeName);
-					yield* encodeString(record.target.getAttribute(record.attributeName));
+					let attributeValue = record.target.getAttribute(record.attributeName);
+					if(attributeValue == null) {
+						yield tagValue(index.for(record.target), tags.RemoveAttr);
+						yield* encodeString(record.attributeName);
+					} else {
+						yield tagValue(index.for(record.target), tags.SetAttr);
+						yield* encodeString(record.attributeName);
+						yield* encodeString(attributeValue);
+					}
 					break;
 			}
 
