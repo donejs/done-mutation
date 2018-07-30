@@ -2,6 +2,7 @@ const tags = require("./tags");
 
 exports.decodeNode = decodeNode;
 exports.decodeString = decodeString;
+exports.decodeType = decodeType;
 exports.extractTag = extractTag;
 exports.extractValue = extractValue;
 
@@ -24,6 +25,20 @@ function decodeString(bytes) {
 				string += String.fromCharCode(value);
 				break;
 		}
+	}
+}
+
+function decodeType(bytes) {
+	let type = bytes.next().value;
+	switch(type) {
+		case 1:
+			return Boolean(bytes.next().value);
+		case 2:
+			return Number(bytes.next().value);
+		case 3:
+			return decodeString(bytes);
+		default:
+			throw new Error(`The type ${type} is not recognized.`);
 	}
 }
 

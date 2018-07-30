@@ -14,6 +14,23 @@ function* encodeString(text) {
 	yield tags.Zero;
 }
 
+function* encodeType(val) {
+	switch(typeof val) {
+		case "boolean":
+			yield 1;
+			yield Number(val);
+			break;
+		case "number":
+			yield 2;
+			yield val|0;
+			break;
+		case "string":
+			yield 3;
+			yield* encodeString(val);
+			break;
+	}
+}
+
 function* encodeElement(element) {
 	// Tag Name
 	yield* encodeString(element.tagName.toLowerCase());
@@ -57,6 +74,10 @@ function* encodeNode(node) {
 class MutationEncoder {
 	constructor(root) {
 		this.index = new NodeIndex(root);
+	}
+
+	encodeEvent(event) {
+		return Uint16Array.from(this.event(event));
 	}
 
 	encode(records) {
@@ -125,8 +146,24 @@ class MutationEncoder {
 					}
 					break;
 			}
+		}
+	}
 
-
+	*event(event) {
+		let index = this.index;
+		switch(event.type) {
+			case "change":
+				yield tagValue(index.for(event.target), tags.Prop);
+				if(event.target.type === "checkbox") {
+					yield* encodeString("checked");
+					yield* encodeType(event.target.checked);
+				} else {
+					yield* encodeString("value");
+					yield* encodeType(event.target.value);
+				}
+				break;
+			default:
+				throw new Error(`Encoding the event '${event.type}' is not supported.`);
 		}
 	}
 }

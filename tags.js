@@ -5,7 +5,8 @@ const Instructions = {
 	Move: 3,
 	Text: 4,
 	SetAttr: 5,
-	RemoveAttr: 6
+	RemoveAttr: 6,
+	Prop: 7
 };
 
 module.exports = Instructions;
