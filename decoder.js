@@ -53,7 +53,12 @@ class MutationDecoder {
 					index = extractValue(byte);
 					let attrName = decodeString(iter);
 					let newValue = decodeString(iter);
-					mutation = {type: "set attribute", attrName, newValue};
+					mutation = {type: "set-attribute", attrName, newValue};
+					yield mutation;
+					break;
+				case tags.RemoveAttr:
+					index = extractValue(byte);
+					mutation = {type: "remove-attribute", attrName: decodeString(iter)};
 					yield mutation;
 					break;
 				default:

@@ -77,6 +77,11 @@ class MutationPatcher {
 					let attrValue = decodeString(iter);
 					node.setAttribute(attrName, attrValue);
 					break;
+				case tags.RemoveAttr:
+					index = extractValue(byte);
+					node = this.walker.next(index).value;
+					node.removeAttribute(decodeString(iter));
+					break;
 				default:
 					console.log("Tag", extractTag(byte), extractValue(byte));
 					break;
