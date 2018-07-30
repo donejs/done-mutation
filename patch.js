@@ -37,7 +37,7 @@ class MutationPatcher {
 		const document = root.ownerDocument;
 
 		for(let byte of iter) {
-			let index, ref;
+			let index, ref, child;
 
 			switch(extractTag(byte)) {
 				case tags.Zero:
@@ -46,9 +46,9 @@ class MutationPatcher {
 					index = extractValue(byte);
 					ref = iter.next().value;
 					let nodeType = iter.next().value;
-					let child = decodeNode(iter, nodeType, document);
+					child = decodeNode(iter, nodeType, document);
 					let parent = this.walker.next(index).value;
-					let sibling = getSibling(parent, ref);
+					let sibling = getChild(parent, ref);
 					parent.insertBefore(child, sibling);
 					break;
 				case tags.Move:
@@ -58,8 +58,10 @@ class MutationPatcher {
 					throw new Error('Moves have not been implemented');
 				case tags.Remove:
 					index = extractValue(byte);
+					let childIndex = iter.next().value;
 					let el = this.walker.next(index).value;
-					el.parentNode.removeChild(el);
+					child = getChild(el, childIndex);
+					el.removeChild(child);
 					this._startWalker();
 					break;
 				case tags.Text:
@@ -76,7 +78,7 @@ class MutationPatcher {
 	}
 }
 
-function getSibling(parent, index) {
+function getChild(parent, index) {
 	let i = 0, child = parent.firstChild;
 	while(i < index) {
 		i++;

@@ -1,16 +1,41 @@
+const parentSymbol = Symbol.for("done.parentNode");
 
 class NodeIndex {
 	constructor(root) {
 		this.root = root;
 		this.map = new WeakMap();
+		this.parentMap = new WeakMap();
 
 		//debugger;
 		this.walk(root);
 	}
 
+	reIndexFrom() {
+		// TODO make this not horrible.
+		// This should walk up the parents until it finds a parent without
+		// Any nextSiblings.
+		let startNode = this.root;
+		this.walk(startNode);
+	}
+
+	setParentIndex(searchNode) {
+		let parent = searchNode.parentNode;
+		let node = parent.firstChild;
+		let index = 0;
+
+		while(node && node !== searchNode) {
+			index++;
+			node = node.nextSibling;
+		}
+
+		this.parentMap.set(searchNode, index);
+	}
+
 	// Based on https://gist.github.com/cowboy/958000
 	walk(node, startIndex = 0) {
 		let skip, tmp;
+		let parentIndex = new Map();
+		parentIndex.set(node, 0);
 
 		// This depth value will be incremented as the depth increases and
 		// decremented as the depth decreases. The depth of the initial node is 0.
@@ -26,12 +51,23 @@ class NodeIndex {
 
 				// Set the index of this node
 				this.map.set(tmp, index);
+
+				parentIndex.set(node, 0);
+				this.parentMap.set(tmp, 0);
+				tmp[parentSymbol] = node;
+
 				index++;
 			} else if ( tmp = node.nextSibling ) {
 				// If skipping or there is no first child, get the next sibling. If
 				// there is a next sibling, reset the skip flag.
 				skip = false;
 				this.map.set(tmp, index);
+
+				let parentI = parentIndex.get(tmp.parentNode) + 1;
+				parentIndex.set(tmp.parentNode, parentI);
+				this.parentMap.set(tmp, parentI);
+				tmp[parentSymbol] = tmp.parentNode;
+
 				index++;
 			} else {
 				// Skipped or no first child and no next sibling, so traverse upwards,
@@ -54,26 +90,28 @@ class NodeIndex {
 
 	// Get the cached index of a Node. If you can't find that,
 	// Walk up to a parent that is indexed. At that point index down its children.
-	for(searchNode) {
-		let node = searchNode;
-		let root = this.root;
-
+	for(node) {
 		if(this.map.has(node)) {
 			return this.map.get(node);
 		}
 
-		do {
-			node = node.parentNode;
-
-			if(this.map.has(node)) {
-				this.walk(node, this.map.get(node) + 1);
-				return this.map.get(searchNode);
-			}
-		} while(node !== root);
+		throw new Error("We don't know about this node", node);
 	}
 
-	purge() {
+	fromParent(node) {
+		let parent = node[parentSymbol];
+		let parentIndex = this.for(parent);
+		let childIndex = this.parentMap.get(node);
+		return [parentIndex, childIndex];
+	}
 
+	purge(node) {
+		// TODO this should do something different...
+		let index = this.for(node);
+		this.reIndexFrom(node);
+		this.map.delete(node);
+		this.parentMap.delete(node);
+		return index;
 	}
 }
 

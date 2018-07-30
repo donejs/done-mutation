@@ -77,7 +77,9 @@ class MutationEncoder {
 					for(j = 0, jLen = record.removedNodes.length; j < jLen; j++) {
 						let node = record.removedNodes[j];
 
-						if(nodeMoved(node, j, records)) {
+
+
+						if(false && nodeMoved(node, j, records)) {
 							// TODO implement node moving
 
 							movedNodes.add(node);
@@ -85,18 +87,25 @@ class MutationEncoder {
 							yield 1; // parent index
 							yield 0; // ref
 						} else {
-							yield tagValue(index.for(node), tags.Remove);
+							let [parentIndex, childIndex] = index.fromParent(node);
+							index.purge(node);
+							yield tagValue(parentIndex, tags.Remove);
+							yield childIndex;
 						}
 					}
 
 					for (let node of record.addedNodes) {
 						// If this node was moved we have already done a move instruction
 						if(movedNodes.has(node)) {
-							movedNodes.delete(node);
-							continue;
+							throw new Error("Moving nodes is not yet supported");
+							//movedNodes.delete(node);
+							//continue;
 						}
 
-						yield tagValue(index.for(node.parentNode), tags.Insert);
+						let parentIndex = index.for(node.parentNode);
+						index.reIndexFrom(node);
+
+						yield tagValue(parentIndex, tags.Insert);
 						yield getChildIndex(node.parentNode, node); // ref
 						yield* encodeNode(node);
 					}

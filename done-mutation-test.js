@@ -54,3 +54,27 @@ QUnit.test("Setting textContent", function(assert){
 	mo.observe(root, { childList: true, subtree: true, characterData: true });
 	article.textContent = "A title";
 });
+
+QUnit.test("Deleting TextNodes", function(assert){
+	var done = assert.async();
+
+	var root = document.createElement("div");
+	var article = document.createElement("article");
+	var tn = document.createTextNode("Article");
+	article.appendChild(tn);
+	root.appendChild(article);
+	helpers.fixture.el().appendChild(root);
+	var clone = root.cloneNode(true);
+
+	var encoder = new MutationEncoder(root);
+	var patcher = new MutationPatcher(clone);
+
+	var mo = new MutationObserver(function(records) {
+		patcher.patch(encoder.encode(records));
+		assert.equal(clone.firstChild.firstChild, null, "There is no child of article");
+		done();
+	});
+
+	mo.observe(root, { childList: true, subtree: true, characterData: true });
+	article.removeChild(tn);
+});
