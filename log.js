@@ -15,6 +15,6 @@ exports.element = function(root) {
 	}
 
 	let mo = new MutationObserver(callback);
-	mo.observe(root, { characterData: true, childList: true, subtree: true });
+	mo.observe(root, { subtree: true, characterData: true, childList: true, attributes: true });
 	return mo;
 };
