@@ -1,6 +1,7 @@
 const {
 	decodeString,
 	decodeNode,
+	decodeType,
 	extractTag,
 	extractValue
 } = require("./decode");
@@ -53,17 +54,21 @@ class MutationDecoder {
 					index = extractValue(byte);
 					let attrName = decodeString(iter);
 					let newValue = decodeString(iter);
-					mutation = {type: "set-attribute", attrName, newValue};
+					mutation = {type: "set-attribute", index, attrName, newValue};
 					yield mutation;
 					break;
 				case tags.RemoveAttr:
 					index = extractValue(byte);
-					mutation = {type: "remove-attribute", attrName: decodeString(iter)};
+					mutation = {type: "remove-attribute", index, attrName: decodeString(iter)};
+					yield mutation;
+					break;
+				case tags.Prop:
+					index = extractValue(byte);
+					mutation = {type: "property", index, property: decodeString(iter), value: decodeType(iter)};
 					yield mutation;
 					break;
 				default:
-					console.log("Tag", extractTag(byte), extractValue(byte));
-					break;
+					throw new Error(`Cannot decode instruction '${extractTag(byte)}'.`);
 			}
 		}
 	}

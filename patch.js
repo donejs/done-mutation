@@ -1,4 +1,7 @@
-const { decodeNode, decodeString, extractTag, extractValue } = require("./decode");
+const {
+	decodeNode, decodeString, decodeType,
+	extractTag, extractValue
+} = require("./decode");
 const tags = require("./tags");
 
 function* walk(root, nextIndex) {
@@ -82,9 +85,13 @@ class MutationPatcher {
 					node = this.walker.next(index).value;
 					node.removeAttribute(decodeString(iter));
 					break;
-				default:
-					console.log("Tag", extractTag(byte), extractValue(byte));
+				case tags.Prop:
+					index = extractValue(byte);
+					node = this.walker.next(index).value;
+					node[decodeString(iter)] = decodeType(iter);
 					break;
+				default:
+					throw new Error(`The instruction ${extractTag(byte)} is not supported.`);
 			}
 		}
 	}

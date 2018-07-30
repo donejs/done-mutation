@@ -39,8 +39,21 @@
 	const log = require("~/log");
 	const MutationPatcher = require("~/patch");
 
+	function importClone(node, document) {
+		let clone = document.importNode(node, true);
+		let scripts = clone.getElementsByTagName("script");
+		for(let script of scripts) {
+			script.removeAttribute("src");
+			while(script.firstChild) {
+				script.removeChild(script.firstChild);
+			}
+		}
+		return clone;
+	}
+
 	window.sourceDoc = document.querySelector("#doc1").contentDocument;
 	window.cloneDoc = document.querySelector("#doc2").contentDocument;
+	cloneDoc.documentElement.replaceWith(importClone(sourceDoc.documentElement, cloneDoc));
 
 	log.element(sourceDoc.documentElement);
 
@@ -57,6 +70,10 @@
 		attributes: true
 	});
 
+	sourceDoc.addEventListener("change", ev => {
+		let bytes = encoder.encodeEvent(ev);
+		patcher.patch(bytes);
+	});
 </script>
 
 <main id="apps">
@@ -66,6 +83,6 @@
 	</div>
 	<div class="app">
 		<span class="label">Destination</span>
-		<iframe id="doc2" src="./user-profile-app.html"></iframe>
+		<iframe id="doc2"></iframe>
 	</div>
 </main>
