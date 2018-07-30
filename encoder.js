@@ -98,8 +98,8 @@ class MutationEncoder {
 						// If this node was moved we have already done a move instruction
 						if(movedNodes.has(node)) {
 							throw new Error("Moving nodes is not yet supported");
-							movedNodes.delete(node);
-							continue;
+							//movedNodes.delete(node);
+							//continue;
 						}
 
 						let parentIndex = index.for(node.parentNode);

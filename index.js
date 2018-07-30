@@ -10,16 +10,12 @@ class NodeIndex {
 		this.walk(root);
 	}
 
-	reIndexFrom(node) {
+	reIndexFrom() {
 		// TODO make this not horrible.
 		// This should walk up the parents until it finds a parent without
 		// Any nextSiblings.
 		let startNode = this.root;
 		this.walk(startNode);
-
-		//let startIndex = this.map.get(startNode) + 1;
-		//this.walk(startNode, startIndex);
-
 	}
 
 	setParentIndex(searchNode) {
@@ -94,15 +90,12 @@ class NodeIndex {
 
 	// Get the cached index of a Node. If you can't find that,
 	// Walk up to a parent that is indexed. At that point index down its children.
-	for(searchNode) {
-		let node = searchNode;
-		let root = this.root;
-
+	for(node) {
 		if(this.map.has(node)) {
 			return this.map.get(node);
 		}
 
-		throw new Error("We don't know about this node", searchNode);
+		throw new Error("We don't know about this node", node);
 	}
 
 	fromParent(node) {
