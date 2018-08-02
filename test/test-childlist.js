@@ -2,6 +2,7 @@ var QUnit = require("steal-qunit");
 var MutationEncoder = require("../encoder");
 var MutationPatcher = require("../patch");
 var MutationDecoder = require("../decoder");
+var NodeIndex = require("../index");
 var helpers = require("./test-helpers");
 
 QUnit.module("Node insertion/removal", {
@@ -17,7 +18,9 @@ QUnit.test("Nodes inserted before MutationObserver starts observing", function(a
 	helpers.fixture.el().appendChild(root);
 	var clone = root.cloneNode(true);
 
-	var encoder = new MutationEncoder(root);
+	var index = new NodeIndex(root);
+	index.startObserving();
+	var encoder = new MutationEncoder(index);
 	var decoder = new MutationDecoder(root.ownerDocument);
 
 	var article = document.createElement("article");
@@ -27,6 +30,7 @@ QUnit.test("Nodes inserted before MutationObserver starts observing", function(a
 		var instr = Array.from(decoder.decode(encoder.encode(records)));
 		assert.equal(instr.length, 1, "There is one mutation instruction");
 		assert.equal(instr[0].node.nodeName, "SPAN", "span mutation observed");
+		index.stopObserving();
 		done();
 	});
 
