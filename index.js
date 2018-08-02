@@ -5,11 +5,8 @@ class NodeIndex {
 		this.root = root;
 		this.map = new WeakMap();
 		this.parentMap = new WeakMap();
-		this.indexRoot();
-	}
-
-	indexRoot() {
-		this.walk(this.root);
+		this.walk(root);
+		this._onMutations = this._onMutations.bind(this);
 	}
 
 	reIndexFrom() {
@@ -114,6 +111,34 @@ class NodeIndex {
 		this.map.delete(node);
 		this.parentMap.delete(node);
 		return index;
+	}
+
+	startObserving() {
+		let window = this.root.ownerDocument.defaultView;
+		console.assert(window, "Cannot observe without a 'window' object");
+		let MutationObserver = window.MutationObserver;
+		console.assert(MutationObserver, "Cannot observe without a MutationObserver");
+		this._observer = new MutationObserver(this._onMutations);
+		this._observer.observe(this.root, {
+			subtree: true,
+			childList: true
+		});
+	}
+
+	stopObserving() {
+		if(this._observer) {
+			this._observer.disconnect();
+		}
+	}
+
+	_onMutations(records) {
+		// Ensure that we have indexed each added Node.
+		let index = this;
+		records.forEach(function(record){
+			record.addedNodes.forEach(function(node){
+				index.reIndexFrom(node)
+			});
+		});
 	}
 }
 
