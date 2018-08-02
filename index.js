@@ -5,9 +5,11 @@ class NodeIndex {
 		this.root = root;
 		this.map = new WeakMap();
 		this.parentMap = new WeakMap();
+		this.indexRoot();
+	}
 
-		//debugger;
-		this.walk(root);
+	indexRoot() {
+		this.walk(this.root);
 	}
 
 	reIndexFrom() {
