@@ -136,7 +136,7 @@ class NodeIndex {
 		let index = this;
 		records.forEach(function(record){
 			record.addedNodes.forEach(function(node){
-				index.reIndexFrom(node)
+				index.reIndexFrom(node);
 			});
 		});
 	}
