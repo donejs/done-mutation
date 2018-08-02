@@ -78,11 +78,11 @@ class MutationEncoder {
 	}
 
 	encodeEvent(event) {
-		return Uint16Array.from(this.event(event));
+		return Uint8Array.from(this.event(event));
 	}
 
 	encode(records) {
-		return Uint16Array.from(this.mutations(records));
+		return Uint8Array.from(this.mutations(records));
 	}
 
 	*mutations(records) {
