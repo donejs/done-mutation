@@ -74,6 +74,7 @@ function* encodeNode(node) {
 class MutationEncoder {
 	constructor(root) {
 		this.index = new NodeIndex(root);
+		this._indexed = false;
 	}
 
 	encodeEvent(event) {
@@ -85,6 +86,7 @@ class MutationEncoder {
 	}
 
 	*mutations(records) {
+		this._initIndex();
 		const index = this.index;
 		const movedNodes = new WeakSet();
 
@@ -150,6 +152,7 @@ class MutationEncoder {
 	}
 
 	*event(event) {
+		this._initIndex();
 		let index = this.index;
 		switch(event.type) {
 			case "change":
@@ -164,6 +167,12 @@ class MutationEncoder {
 				break;
 			default:
 				throw new Error(`Encoding the event '${event.type}' is not supported.`);
+		}
+	}
+
+	_initIndex() {
+		if(!this._indexed) {
+			this.index.indexRoot();
 		}
 	}
 }
