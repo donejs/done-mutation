@@ -58,9 +58,9 @@ function decodeElement(bytes, document) {
 
 	let attributeName = decodeString(bytes);
 	while(attributeName) {
-		attributeName = false;
-		console.log("NAME", attributeName, "VALUE", decodeString(bytes));
-		// TODO set it
+		let attributeValue = decodeString(bytes);
+		el.setAttribute(attributeName, attributeValue);
+		attributeName = decodeString(bytes);
 	}
 
 	let parent = el;
