@@ -1,6 +1,6 @@
 {
   "name": "done-mutation",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "main": "done-mutation.js",
   "description": "Encodes MutationRecords so they can be patched on other documents",
   "homepage": "https://github.com/donejs/done-mutation",
