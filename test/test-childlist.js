@@ -75,3 +75,42 @@ QUnit.test("Inserting a large stylesheet", function(assert){
 	style.appendChild(document.createTextNode(css));
 	main.appendChild(style);
 });
+
+QUnit.test("Correctly encodes elements with children", function(assert) {
+	var done = assert.async();
+
+	var root = document.createElement("div");
+	var main = document.createElement("main");
+	root.appendChild(main);
+	helpers.fixture.el().appendChild(root);
+
+	var encoder = new MutationEncoder(root);
+	var decoder = new MutationDecoder(root.ownerDocument);
+
+	var mo = new MutationObserver(function(records) {
+		var bytes = Uint8Array.from(encoder.encode(records));
+		var instrs = Array.from(decoder.decode(bytes));
+
+		assert.equal(instrs.length, 1, "There is one instruction");
+
+		var instr = instrs[0];
+		assert.equal(instr.type, "insert");
+		assert.equal(instr.node.nodeName, "HEADER");
+
+		// First child
+		assert.equal(instr.node.firstChild.nodeType, 3, "a TextNode");
+		assert.equal(instr.node.firstChild.nodeValue, " ", "a space");
+
+		// Next child
+		assert.equal(instr.node.firstChild.nextSibling.nodeName, "DIV", "an element");
+
+		done();
+	});
+
+	mo.observe(root, { childList: true, subtree: true});
+
+	var header = document.createElement("header");
+	header.innerHTML = ` <div></div>`;
+
+	main.appendChild(header);
+});

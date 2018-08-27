@@ -46,11 +46,9 @@ function* encodeElement(element) {
 	let child = element.firstChild;
 	while(child) {
 		yield* encodeNode(child);
-		yield tags.Zero;
-
 		child = child.nextSibling;
 	}
-	yield tags.Zero;
+	yield tags.Zero; // End of children
 }
 
 function* encodeNode(node) {
@@ -66,9 +64,6 @@ function* encodeNode(node) {
 		default:
 			throw new Error(`Cannot yet encode nodeType ${node.nodeType}`);
 	}
-
-	// End of element
-	yield tags.Zero;
 }
 
 class MutationEncoder {
