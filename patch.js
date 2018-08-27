@@ -5,7 +5,7 @@ const {
 const tags = require("./tags");
 
 function* walk(root, nextIndex) {
-	const document = root.ownerDocument;
+	const document = getDocument(root);
 	const walker = document.createTreeWalker(root, -1);
 	let index = 0;
 	let currentNode = walker.nextNode();
@@ -23,6 +23,10 @@ function* walk(root, nextIndex) {
 	}
 }
 
+function getDocument(node) {
+		return node.nodeType === 9 ? node : node.ownerDocument;
+}
+
 class MutationPatcher {
 	constructor(root) {
 		this.root = root;
@@ -37,7 +41,7 @@ class MutationPatcher {
 	patch(bytes) {
 		const iter = bytes[Symbol.iterator]();
 		const root = this.root;
-		const document = root.ownerDocument;
+		const document = getDocument(root);
 
 		for(let byte of iter) {
 			let index, ref, node, child;

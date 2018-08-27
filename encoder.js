@@ -90,12 +90,38 @@ class MutationEncoder {
 		const movedNodes = new WeakSet();
 
 		let i = 0, iLen = records.length;
-		for(;i < iLen; i++) {
+		let rangeStart = null, rangeEnd = null;
+
+		//for(;i < iLen; i++) {
+		while(i < iLen) {
 			let record = records[i];
 			let j, jLen;
 
 			switch(record.type) {
 				case "childList":
+					// This adjusts the index so that we do removals in reverse order
+					// Let's say we had an array of mutations like:
+					// [{removedNodes:[1]}, {removedNodes:[2]}, {removedNodes:[3]}
+					// {addedNodes:[1]}, {addedNodes:[2]}, {addedNodes:[3]}]
+					// We want to do all of the removals first, in reverse order
+					// And then proceed to the addedNode records.
+					// This is achieved by keeping a start and end index for the
+					// removal groupings
+					if(isRemovalRecord(record)) {
+						if(rangeStart == null) {
+							rangeStart = i;
+						}
+						if(rangeEnd == null) {
+							let nextRecord = records[i + 1];
+							if(nextRecord && isRemovalRecord(nextRecord)) {
+								i++;
+								continue;
+							} else {
+								rangeEnd = i;
+							}
+						}
+					}
+
 					for(j = 0, jLen = record.removedNodes.length; j < jLen; j++) {
 						let node = record.removedNodes[j];
 
@@ -147,6 +173,24 @@ class MutationEncoder {
 					}
 					break;
 			}
+
+			// If there is no rangeStart/end proceed
+			if(rangeStart == null && rangeEnd == null) {
+				i++;
+			} else {
+				// If we have reached the first removal record
+				// Then all removals have been processed and we can
+				// skip ahead to the next non-removal record.
+				if(i === rangeStart) {
+					i = rangeEnd + 1;
+					rangeStart = null;
+					rangeEnd = null;
+				}
+				// Continue down to the next removal record.
+				else {
+					i--;
+				}
+			}
 		}
 	}
 
@@ -193,6 +237,10 @@ function nodeMoved(node, recordIndex, records) {
 		}
 	}
 	return false;
+}
+
+function isRemovalRecord(record) {
+	return record.removedNodes.length > 0 && record.addedNodes.length === 0;
 }
 
 

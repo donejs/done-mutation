@@ -114,3 +114,100 @@ QUnit.test("Correctly encodes elements with children", function(assert) {
 
 	main.appendChild(header);
 });
+
+QUnit.test("When a document is the root", function(assert) {
+	var done = assert.async();
+
+	var doc1 = document.implementation.createHTMLDocument("doc1");
+	var doc2 = document.implementation.createHTMLDocument("doc2");
+
+	var encoder = new MutationEncoder(doc1);
+	var patcher = new MutationPatcher(doc2);
+
+	var mo = new MutationObserver(function(records) {
+		var bytes = Uint8Array.from(encoder.encode(records));
+		patcher.patch(bytes);
+
+		assert.equal(doc2.head.lastChild.nodeName, "STYLE", "the style was appended.");
+
+		done();
+	});
+
+	mo.observe(doc1, { childList: true, subtree: true});
+
+	doc1.head.appendChild(doc1.createElement("style"));
+});
+
+QUnit.test("Removing multiple sibling nodes", function(assert) {
+	var done = assert.async();
+
+	var root = document.createElement("div");
+	var main = document.createElement("main");
+	root.appendChild(main);
+	["span", "ul", "style"].forEach(function(nodeName) {
+		main.appendChild(document.createElement(nodeName));
+	});
+	helpers.fixture.el().appendChild(root);
+	var clone = root.cloneNode(true);
+
+	var encoder = new MutationEncoder(root);
+	var patcher = new MutationPatcher(clone);
+
+	var mo = new MutationObserver(function(records) {
+		var bytes = encoder.encode(records);
+		patcher.patch(bytes);
+
+		var child = clone.firstChild.firstChild;
+		assert.equal(child.nodeName, "STYLE", "The style tag remains");
+		assert.equal(child.nextSibling, null, "Other nodes removed");
+
+		done();
+	});
+
+	mo.observe(root, { childList: true, subtree: true});
+
+	var span = root.querySelector("span");
+	var ul = root.querySelector("ul");
+
+	main.removeChild(span);
+	main.removeChild(ul);
+});
+
+QUnit.test("Removing and replacing multiple sibling nodes", function(assert) {
+	var done = assert.async();
+
+	var root = document.createElement("div");
+	var main = document.createElement("main");
+	root.appendChild(main);
+	["span", "ul", "style"].forEach(function(nodeName) {
+		main.appendChild(document.createElement(nodeName));
+	});
+	helpers.fixture.el().appendChild(root);
+	var clone = root.cloneNode(true);
+
+	var encoder = new MutationEncoder(root);
+	var patcher = new MutationPatcher(clone);
+
+	var mo = new MutationObserver(function(records) {
+		var bytes = encoder.encode(records);
+		patcher.patch(bytes);
+
+		var child = clone.firstChild.firstChild;
+		assert.equal(child.nodeName, "STYLE", "The style tag remains");
+		assert.equal(child.nextSibling.nodeName, "DATALIST", "New element");
+		assert.equal(child.nextSibling.nextSibling.nodeName, "PROGRESS", "New element");
+
+		done();
+	});
+
+	mo.observe(root, { childList: true, subtree: true});
+
+	var span = root.querySelector("span");
+	var ul = root.querySelector("ul");
+
+	main.removeChild(span);
+	main.removeChild(ul);
+
+	main.appendChild(document.createElement("datalist"));
+	main.appendChild(document.createElement("progress"));
+});
