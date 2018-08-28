@@ -3,15 +3,12 @@ const tags = require("./tags");
 exports.decodeNode = decodeNode;
 exports.decodeString = decodeString;
 exports.decodeType = decodeType;
-exports.extractTag = extractTag;
-exports.extractValue = extractValue;
+exports.toUint16 = toUint16;
 
-function extractTag(value) {
-	return value & ((1 << 3) - 1);
-}
-
-function extractValue(value) {
-	return value >>> 3;
+function toUint16(iter) {
+	let high = iter.next().value;
+	let low = iter.next().value;
+	return (((high & 255) << 8) | (low & 255));
 }
 
 function decodeString(bytes) {

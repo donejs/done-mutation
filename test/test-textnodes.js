@@ -78,3 +78,35 @@ QUnit.test("Deleting TextNodes", function(assert){
 	mo.observe(root, { childList: true, subtree: true, characterData: true });
 	article.removeChild(tn);
 });
+
+QUnit.test("Large trees that exceed 255 index", function(assert) {
+	var done = assert.async();
+
+	var doc1 = document.implementation.createHTMLDocument("doc1");
+	var doc2 = document.implementation.createHTMLDocument("doc2");
+
+	function addDiv(doc, i) {
+		var div = doc.createElement("div");
+		div.textContent = i.toString();
+		doc.body.appendChild(div);
+	}
+
+	for(var i = 0; i < 300; i++) {
+		addDiv(doc1, i);
+		addDiv(doc2, i);
+	}
+
+	var encoder = new MutationEncoder(doc1);
+	var patcher = new MutationPatcher(doc2);
+
+	var mo = new MutationObserver(function(records) {
+		patcher.patch(encoder.encode(records));
+
+		assert.equal(doc2.body.lastChild.firstChild.nodeValue, "new value", "updated the right node");
+
+		done();
+	});
+
+	mo.observe(doc1, { childList: true, subtree: true, characterData: true });
+	doc1.body.lastChild.firstChild.nodeValue = "new value";
+});
