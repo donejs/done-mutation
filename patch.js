@@ -57,8 +57,6 @@ class MutationPatcher {
 					let sibling = getChild(parent, ref);
 					parent.insertBefore(child, sibling);
 					break;
-				case tags.Move:
-					throw new Error('Moves have not been implemented');
 				case tags.Remove:
 					index = toUint16(iter);
 					let childIndex = toUint16(iter);
