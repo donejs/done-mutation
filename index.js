@@ -114,7 +114,8 @@ class NodeIndex {
 	}
 
 	startObserving() {
-		let window = this.root.ownerDocument.defaultView;
+		let doc = this.root.nodeType === 9 ? this.root : this.root.ownerDocument;
+		let window = doc.defaultView;
 		console.assert(window, "Cannot observe without a 'window' object");
 		let MutationObserver = window.MutationObserver;
 		console.assert(MutationObserver, "Cannot observe without a MutationObserver");

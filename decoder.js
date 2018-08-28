@@ -39,7 +39,7 @@ class MutationDecoder {
 					break;
 				case tags.Remove:
 					index = toUint16(iter);
-					let child = iter.next().value;
+					let child = toUint16(iter);
 					mutation = {type: "remove", index, child};
 					yield mutation;
 					break;
