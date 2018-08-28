@@ -1,10 +1,9 @@
 const tags = require("./tags");
 const NodeIndex = require("./index");
 
-const TAG_SIZE = 3;
-
-function tagValue(value, tag) {
-	return (value << TAG_SIZE) | tag;
+function* toUint8(n) {
+	yield ((n >> 8) & 0xff); // high
+	yield n & 0xff; // low
 }
 
 function* encodeString(text) {
@@ -129,14 +128,16 @@ class MutationEncoder {
 							// TODO implement node moving
 
 							movedNodes.add(node);
-							yield tagValue(index.for(node), tags.Move); // index
+							yield tags.Move;
+							yield* toUint8(index.for(node));
 							yield 1; // parent index
 							yield 0; // ref
 						} else {
 							let [parentIndex, childIndex] = index.fromParent(node);
 							index.purge(node);
-							yield tagValue(parentIndex, tags.Remove);
-							yield childIndex;
+							yield tags.Remove;
+							yield* toUint8(parentIndex);
+							yield* toUint8(childIndex);
 						}
 					}
 
@@ -151,23 +152,27 @@ class MutationEncoder {
 						let parentIndex = index.for(node.parentNode);
 						index.reIndexFrom(node);
 
-						yield tagValue(parentIndex, tags.Insert);
-						yield getChildIndex(node.parentNode, node); // ref
+						yield tags.Insert;
+						yield* toUint8(parentIndex);
+						yield* toUint8(getChildIndex(node.parentNode, node)); // ref
 						yield* encodeNode(node);
 					}
 
 					break;
 				case "characterData":
-					yield tagValue(index.for(record.target), tags.Text);
+					yield tags.Text;
+					yield* toUint8(index.for(record.target));
 					yield* encodeString(record.target.nodeValue);
 					break;
 				case "attributes":
 					let attributeValue = record.target.getAttribute(record.attributeName);
 					if(attributeValue == null) {
-						yield tagValue(index.for(record.target), tags.RemoveAttr);
+						yield tags.RemoveAttr;
+						yield* toUint8(index.for(record.target));
 						yield* encodeString(record.attributeName);
 					} else {
-						yield tagValue(index.for(record.target), tags.SetAttr);
+						yield tags.SetAttr;
+						yield* toUint8(index.for(record.target));
 						yield* encodeString(record.attributeName);
 						yield* encodeString(attributeValue);
 					}
@@ -198,7 +203,8 @@ class MutationEncoder {
 		let index = this.index;
 		switch(event.type) {
 			case "change":
-				yield tagValue(index.for(event.target), tags.Prop);
+				yield tags.Prop;
+				yield* toUint8(index.for(event.target));
 				if(event.target.type === "checkbox") {
 					yield* encodeString("checked");
 					yield* encodeType(event.target.checked);

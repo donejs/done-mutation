@@ -1,6 +1,5 @@
 const {
-	decodeNode, decodeString, decodeType,
-	extractTag, extractValue
+	decodeNode, decodeString, decodeType, toUint16
 } = require("./decode");
 const tags = require("./tags");
 
@@ -46,12 +45,12 @@ class MutationPatcher {
 		for(let byte of iter) {
 			let index, ref, node, child;
 
-			switch(extractTag(byte)) {
+			switch(byte) {
 				case tags.Zero:
 					break;
 				case tags.Insert:
-					index = extractValue(byte);
-					ref = iter.next().value;
+					index = toUint16(iter);
+					ref = toUint16(iter);
 					let nodeType = iter.next().value;
 					child = decodeNode(iter, nodeType, document);
 					let parent = this.walker.next(index).value;
@@ -59,43 +58,40 @@ class MutationPatcher {
 					parent.insertBefore(child, sibling);
 					break;
 				case tags.Move:
-					/*index = extractValue(byte);
-					let from = iter.next().value;
-					ref = iter.next().value;*/
 					throw new Error('Moves have not been implemented');
 				case tags.Remove:
-					index = extractValue(byte);
-					let childIndex = iter.next().value;
+					index = toUint16(iter);
+					let childIndex = toUint16(iter);
 					let el = this.walker.next(index).value;
 					child = getChild(el, childIndex);
 					el.removeChild(child);
 					this._startWalker();
 					break;
 				case tags.Text:
-					index = extractValue(byte);
+					index = toUint16(iter);
 					let value = decodeString(iter);
 					node = this.walker.next(index).value;
 					node.nodeValue = value;
 					break;
 				case tags.SetAttr:
-					index = extractValue(byte);
+					index = toUint16(iter);
 					node = this.walker.next(index).value;
 					let attrName = decodeString(iter);
 					let attrValue = decodeString(iter);
 					node.setAttribute(attrName, attrValue);
 					break;
 				case tags.RemoveAttr:
-					index = extractValue(byte);
+					index = toUint16(iter);
 					node = this.walker.next(index).value;
 					node.removeAttribute(decodeString(iter));
 					break;
 				case tags.Prop:
-					index = extractValue(byte);
+					index = toUint16(iter);
 					node = this.walker.next(index).value;
 					node[decodeString(iter)] = decodeType(iter);
 					break;
 				default:
-					throw new Error(`The instruction ${extractTag(byte)} is not supported.`);
+					throw new Error(`The instruction ${byte} is not supported.`);
 			}
 		}
 	}
