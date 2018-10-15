@@ -87,6 +87,7 @@ class MutationEncoder {
 	*mutations(records) {
 		const index = this.index;
 		const movedNodes = new WeakSet();
+		const removedNodes = new WeakSet();
 
 		let i = 0, iLen = records.length;
 		let rangeStart = null, rangeEnd = null;
@@ -133,6 +134,13 @@ class MutationEncoder {
 							yield 1; // parent index
 							yield 0; // ref
 						} else {
+							// If part of this set, it means that this node
+							// was inserted and removed in the same Mutation event
+							// in this case nothing needs to be encoded.
+							if(removedNodes.has(node)) {
+								continue;
+							}
+
 							let [parentIndex, childIndex] = index.fromParent(node);
 							index.purge(node);
 							yield tags.Remove;
@@ -149,13 +157,19 @@ class MutationEncoder {
 							//continue;
 						}
 
-						let parentIndex = index.for(node.parentNode);
-						index.reIndexFrom(node);
+						if(node.parentNode) {
+							let parentIndex = index.for(node.parentNode);
+							index.reIndexFrom(node);
 
-						yield tags.Insert;
-						yield* toUint8(parentIndex);
-						yield* toUint8(getChildIndex(node.parentNode, node)); // ref
-						yield* encodeNode(node);
+							yield tags.Insert;
+							yield* toUint8(parentIndex);
+							yield* toUint8(getChildIndex(node.parentNode, node)); // ref
+							yield* encodeNode(node);
+						} else {
+							// No parent means it was removed in the same mutation.
+							// Add it to this set so that the removal can be ignored.
+							removedNodes.add(node);
+						}
 					}
 
 					break;
