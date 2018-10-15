@@ -211,3 +211,30 @@ QUnit.test("Removing and replacing multiple sibling nodes", function(assert) {
 	main.appendChild(document.createElement("datalist"));
 	main.appendChild(document.createElement("progress"));
 });
+
+QUnit.test("A node that is inserted and removed in the same mutation", function(assert) {
+	var done = assert.async();
+
+	var root = document.createElement("div");
+	var main = document.createElement("main");
+	root.appendChild(main);
+	helpers.fixture.el().appendChild(root);
+	var clone = root.cloneNode(true);
+
+	var encoder = new MutationEncoder(root);
+	var patcher = new MutationPatcher(clone);
+
+	var mo = new MutationObserver(function(records) {
+		var bytes = encoder.encode(records);
+		patcher.patch(bytes);
+
+		assert.equal(clone.firstChild.firstChild, null, "The main element has no children");
+		done();
+	});
+
+	mo.observe(root, { childList: true, subtree: true});
+
+	var span = document.createElement("span");
+	main.appendChild(span);
+	main.removeChild(span);
+});
