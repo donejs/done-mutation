@@ -4,6 +4,7 @@ var MutationPatcher = require("../patch");
 var MutationDecoder = require("../decoder");
 var NodeIndex = require("../index");
 var helpers = require("./test-helpers");
+var log = require("../log");
 
 QUnit.module("Node insertion/removal", {
 	afterEach: function(){
@@ -150,6 +151,8 @@ QUnit.test("Removing multiple sibling nodes", function(assert) {
 	helpers.fixture.el().appendChild(root);
 	var clone = root.cloneNode(true);
 
+	log.element(root);
+
 	var encoder = new MutationEncoder(root);
 	var patcher = new MutationPatcher(clone);
 
@@ -237,4 +240,36 @@ QUnit.test("A node that is inserted and removed in the same mutation", function(
 	var span = document.createElement("span");
 	main.appendChild(span);
 	main.removeChild(span);
+});
+
+QUnit.test("Mutations occur top-down", function(assert) {
+	var done = assert.async();
+
+	var root = document.createElement("div");
+	root.innerHTML = `
+		<h1></h1>
+		<article><h2>Some title</h2></article>
+	`;
+	var h1 = root.querySelector("h1");
+	var h2 = root.querySelector("h2");
+	helpers.fixture.el().appendChild(root);
+	var clone = root.cloneNode(true);
+
+	var encoder = new MutationEncoder(root);
+	var patcher = new MutationPatcher(clone);
+
+	var mo = new MutationObserver(function(records) {
+		var bytes = encoder.encode(records);
+		patcher.patch(bytes);
+
+		assert.equal(clone.querySelector("h1").textContent, "Title", "Appended the title");
+		assert.equal(clone.querySelector("h2").textContent, "Subtitle", "Appended the subtitle");
+		done();
+	});
+
+	mo.observe(root, { childList: true, subtree: true});
+
+	h2.removeChild(h2.firstChild);
+	h2.appendChild(document.createTextNode("Subtitle"));
+	h1.appendChild(document.createTextNode("Title"));
 });

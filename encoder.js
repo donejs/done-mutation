@@ -65,6 +65,83 @@ function* encodeNode(node) {
 	}
 }
 
+function* encodeRemovalMutation(node, parentIndex, childIndex) {
+	yield tags.Remove;
+	yield* toUint8(parentIndex);
+	yield* toUint8(childIndex);
+}
+
+function* encodeAddedMutation(node, parentIndex) {
+	yield tags.Insert;
+	yield* toUint8(parentIndex);
+	yield* toUint8(getChildIndex(node.parentNode, node)); // ref
+	yield* encodeNode(node);
+}
+
+function* encodeCharacterMutation(node, parentIndex) {
+	yield tags.Text;
+	yield* toUint8(parentIndex);
+	yield* encodeString(node.nodeValue);
+}
+
+function* encodeAttributeMutation(record, parentIndex) {
+	let attributeValue = record.target.getAttribute(record.attributeName);
+	if(attributeValue == null) {
+		yield tags.RemoveAttr;
+		yield* toUint8(parentIndex);
+		yield* encodeString(record.attributeName);
+	} else {
+		yield tags.SetAttr;
+		yield* toUint8(parentIndex);
+		yield* encodeString(record.attributeName);
+		yield* encodeString(attributeValue);
+	}
+}
+
+function sortMutations(a, b) {
+	let aType = a[0];
+	let bType = b[0];
+	let aIndex = a[1];
+	let bIndex = b[1];
+
+	if(aType === 0) {
+		if(bType === 0) {
+			let aChild = a[3];
+			let bChild = b[3];
+
+			if(aIndex >= bIndex) {
+				if(aChild > bChild) {
+					return -1;
+				} else {
+					return 1;
+				}
+			} else {
+				return 1;
+			}
+		} else {
+			return -1;
+		}
+	}
+	else if(aType === 1) {
+		if(aType === 1) {
+			if(aIndex > bIndex) {
+				return 1;
+			} else {
+				return -1;
+			}
+		} else {
+			return -1;
+		}
+	}
+	else {
+		if(aType > bType) {
+			return 1;
+		} else {
+			return -1;
+		}
+	}
+}
+
 class MutationEncoder {
 	constructor(rootOrIndex) {
 		if(rootOrIndex instanceof NodeIndex) {
@@ -86,8 +163,8 @@ class MutationEncoder {
 
 	*mutations(records) {
 		const index = this.index;
-		const movedNodes = new WeakSet();
 		const removedNodes = new WeakSet();
+		const instructions = [];
 
 		let i = 0, iLen = records.length;
 		let rangeStart = null, rangeEnd = null;
@@ -125,46 +202,35 @@ class MutationEncoder {
 					for(j = 0, jLen = record.removedNodes.length; j < jLen; j++) {
 						let node = record.removedNodes[j];
 
-						if(false && nodeMoved(node, j, records)) {
-							// TODO implement node moving
-
-							movedNodes.add(node);
-							yield tags.Move;
-							yield* toUint8(index.for(node));
-							yield 1; // parent index
-							yield 0; // ref
-						} else {
-							// If part of this set, it means that this node
-							// was inserted and removed in the same Mutation event
-							// in this case nothing needs to be encoded.
-							if(removedNodes.has(node)) {
-								continue;
-							}
-
-							let [parentIndex, childIndex] = index.fromParent(node);
-							index.purge(node);
-							yield tags.Remove;
-							yield* toUint8(parentIndex);
-							yield* toUint8(childIndex);
+						// If part of this set, it means that this node
+						// was inserted and removed in the same Mutation event
+						// in this case nothing needs to be encoded.
+						if(removedNodes.has(node)) {
+							continue;
 						}
+
+						let [parentIndex, childIndex] = index.fromParent(node);
+						index.purge(node);
+						instructions.push([0, parentIndex, encodeRemovalMutation(node, parentIndex, childIndex), childIndex]);
+
+						/*let [parentIndex, childIndex] = index.fromParent(node);
+						index.purge(node);
+						yield tags.Remove;
+						yield* toUint8(parentIndex);
+						yield* toUint8(childIndex);*/
 					}
 
 					for (let node of record.addedNodes) {
-						// If this node was moved we have already done a move instruction
-						if(movedNodes.has(node)) {
-							throw new Error("Moving nodes is not yet supported");
-							//movedNodes.delete(node);
-							//continue;
-						}
-
 						if(node.parentNode) {
 							let parentIndex = index.for(node.parentNode);
 							index.reIndexFrom(node);
 
-							yield tags.Insert;
+							instructions.push([1, parentIndex, encodeAddedMutation(node, parentIndex)]);
+
+							/*yield tags.Insert;
 							yield* toUint8(parentIndex);
 							yield* toUint8(getChildIndex(node.parentNode, node)); // ref
-							yield* encodeNode(node);
+							yield* encodeNode(node);*/
 						} else {
 							// No parent means it was removed in the same mutation.
 							// Add it to this set so that the removal can be ignored.
@@ -173,24 +239,21 @@ class MutationEncoder {
 					}
 
 					break;
-				case "characterData":
-					yield tags.Text;
-					yield* toUint8(index.for(record.target));
-					yield* encodeString(record.target.nodeValue);
+				case "characterData": {
+					let node = record.target;
+					let parentIndex = index.for(record.target);
+					instructions.push([2, parentIndex, encodeCharacterMutation(node, parentIndex)]);
+					/*yield tags.Text;
+					yield* toUint8();
+					yield* encodeString(record.target.nodeValue);*/
 					break;
-				case "attributes":
-					let attributeValue = record.target.getAttribute(record.attributeName);
-					if(attributeValue == null) {
-						yield tags.RemoveAttr;
-						yield* toUint8(index.for(record.target));
-						yield* encodeString(record.attributeName);
-					} else {
-						yield tags.SetAttr;
-						yield* toUint8(index.for(record.target));
-						yield* encodeString(record.attributeName);
-						yield* encodeString(attributeValue);
-					}
+				}
+
+				case "attributes": {
+					let parentIndex = index.for(record.target);
+					instructions.push([3, parentIndex, encodeAttributeMutation(record, parentIndex)]);
 					break;
+				}
 			}
 
 			// If there is no rangeStart/end proceed
@@ -210,6 +273,11 @@ class MutationEncoder {
 					i--;
 				}
 			}
+		}
+
+		instructions.sort(sortMutations);
+		for(let [,,gen] of instructions) {
+			yield* gen;
 		}
 	}
 
@@ -244,19 +312,6 @@ function getChildIndex(parent, child) {
 		node = node.nextSibling;
 	}
 	return -1;
-}
-
-function nodeMoved(node, recordIndex, records) {
-	let nextIndex = recordIndex + 1;
-	let nextRecord = records[nextIndex];
-	if(nextRecord) {
-		for(let removedNode of nextRecord.removedNodes) {
-			if(node === removedNode) {
-				return true;
-			}
-		}
-	}
-	return false;
 }
 
 function isRemovalRecord(record) {
