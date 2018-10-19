@@ -243,7 +243,7 @@ QUnit.test("A node that is inserted and removed in the same mutation", function(
 	main.removeChild(span);
 });
 
-QUnit.skip("Mutations occur top-down", function(assert) {
+QUnit.test("Mutations occur top-down", function(assert) {
 	var done = assert.async();
 
 	var root = document.createElement("div");
@@ -338,7 +338,6 @@ QUnit.test("Multiple removals and insertions", async function(assert) {
 	await wait();
 	done();
 });
-
 
 QUnit.test("Applying changes to a full app load", async function(assert) {
 	var done = assert.async();
@@ -516,4 +515,35 @@ QUnit.test("Applying changes to a full app load", async function(assert) {
 
 	await wait();
 	done();
+});
+
+QUnit.test("Disabling consecutive TextNode indexing", function(assert) {
+	var done = assert.async();
+
+	var root = document.createElement("div");
+	root.appendChild(document.createTextNode("\n"));
+	root.appendChild(document.createTextNode(""));
+	var h1 = document.createElement("h1");
+	h1.appendChild(document.createTextNode(""));
+	h1.appendChild(document.createTextNode("first"));
+	root.appendChild(h1);
+	helpers.fixture.el().appendChild(root);
+	var clone = root.cloneNode();
+	clone.innerHTML = root.innerHTML;
+
+	var encoder = new MutationEncoder(root, { collapseTextNodes: true });
+	var patcher = new MutationPatcher(clone);
+
+	var mo = new MutationObserver(function(records) {
+		var bytes = encoder.encode(records);
+		patcher.patch(bytes);
+
+		assert.equal(clone.textContent.trim(), "second");
+		done();
+	});
+
+	mo.observe(root, { childList: true, subtree: true});
+
+	h1.removeChild(h1.firstChild.nextSibling);
+	h1.appendChild(document.createTextNode("second"));
 });
