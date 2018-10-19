@@ -65,83 +65,6 @@ function* encodeNode(node) {
 	}
 }
 
-function* encodeRemovalMutation(node, parentIndex, childIndex) {
-	yield tags.Remove;
-	yield* toUint8(parentIndex);
-	yield* toUint8(childIndex);
-}
-
-function* encodeAddedMutation(node, parentIndex) {
-	yield tags.Insert;
-	yield* toUint8(parentIndex);
-	yield* toUint8(getChildIndex(node.parentNode, node)); // ref
-	yield* encodeNode(node);
-}
-
-function* encodeCharacterMutation(node, parentIndex) {
-	yield tags.Text;
-	yield* toUint8(parentIndex);
-	yield* encodeString(node.nodeValue);
-}
-
-function* encodeAttributeMutation(record, parentIndex) {
-	let attributeValue = record.target.getAttribute(record.attributeName);
-	if(attributeValue == null) {
-		yield tags.RemoveAttr;
-		yield* toUint8(parentIndex);
-		yield* encodeString(record.attributeName);
-	} else {
-		yield tags.SetAttr;
-		yield* toUint8(parentIndex);
-		yield* encodeString(record.attributeName);
-		yield* encodeString(attributeValue);
-	}
-}
-
-function sortMutations(a, b) {
-	let aType = a[0];
-	let bType = b[0];
-	let aIndex = a[1];
-	let bIndex = b[1];
-
-	if(aType === 0) {
-		if(bType === 0) {
-			let aChild = a[3];
-			let bChild = b[3];
-
-			if(aIndex >= bIndex) {
-				if(aChild > bChild) {
-					return -1;
-				} else {
-					return 1;
-				}
-			} else {
-				return 1;
-			}
-		} else {
-			return -1;
-		}
-	}
-	else if(aType === 1) {
-		if(aType === 1) {
-			if(aIndex > bIndex) {
-				return 1;
-			} else {
-				return -1;
-			}
-		} else {
-			return -1;
-		}
-	}
-	else {
-		if(aType > bType) {
-			return 1;
-		} else {
-			return -1;
-		}
-	}
-}
-
 class MutationEncoder {
 	constructor(rootOrIndex) {
 		if(rootOrIndex instanceof NodeIndex) {
@@ -164,7 +87,6 @@ class MutationEncoder {
 	*mutations(records) {
 		const index = this.index;
 		const removedNodes = new WeakSet();
-		const instructions = [];
 
 		let i = 0, iLen = records.length;
 		let rangeStart = null, rangeEnd = null;
@@ -211,26 +133,20 @@ class MutationEncoder {
 
 						let [parentIndex, childIndex] = index.fromParent(node);
 						index.purge(node);
-						instructions.push([0, parentIndex, encodeRemovalMutation(node, parentIndex, childIndex), childIndex]);
-
-						/*let [parentIndex, childIndex] = index.fromParent(node);
-						index.purge(node);
 						yield tags.Remove;
 						yield* toUint8(parentIndex);
-						yield* toUint8(childIndex);*/
+						yield* toUint8(childIndex);
 					}
 
 					for (let node of record.addedNodes) {
 						if(node.parentNode) {
 							let parentIndex = index.for(node.parentNode);
-							index.reIndexFrom(node);
+							//index.reIndexFrom(node);
 
-							instructions.push([1, parentIndex, encodeAddedMutation(node, parentIndex)]);
-
-							/*yield tags.Insert;
+							yield tags.Insert;
 							yield* toUint8(parentIndex);
 							yield* toUint8(getChildIndex(node.parentNode, node)); // ref
-							yield* encodeNode(node);*/
+							yield* encodeNode(node);
 						} else {
 							// No parent means it was removed in the same mutation.
 							// Add it to this set so that the removal can be ignored.
@@ -239,21 +155,24 @@ class MutationEncoder {
 					}
 
 					break;
-				case "characterData": {
-					let node = record.target;
-					let parentIndex = index.for(record.target);
-					instructions.push([2, parentIndex, encodeCharacterMutation(node, parentIndex)]);
-					/*yield tags.Text;
-					yield* toUint8();
-					yield* encodeString(record.target.nodeValue);*/
+				case "characterData":
+					yield tags.Text;
+					yield* toUint8(index.for(record.target));
+					yield* encodeString(record.target.nodeValue);
 					break;
-				}
-
-				case "attributes": {
-					let parentIndex = index.for(record.target);
-					instructions.push([3, parentIndex, encodeAttributeMutation(record, parentIndex)]);
+				case "attributes":
+					let attributeValue = record.target.getAttribute(record.attributeName);
+					if(attributeValue == null) {
+						yield tags.RemoveAttr;
+						yield* toUint8(index.for(record.target));
+						yield* encodeString(record.attributeName);
+					} else {
+						yield tags.SetAttr;
+						yield* toUint8(index.for(record.target));
+						yield* encodeString(record.attributeName);
+						yield* encodeString(attributeValue);
+					}
 					break;
-				}
 			}
 
 			// If there is no rangeStart/end proceed
@@ -275,10 +194,8 @@ class MutationEncoder {
 			}
 		}
 
-		instructions.sort(sortMutations);
-		for(let [,,gen] of instructions) {
-			yield* gen;
-		}
+		// Reindex so that the next set up mutations will start from the correct indices
+		index.reIndexFrom();
 	}
 
 	*event(event) {

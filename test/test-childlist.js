@@ -4,7 +4,10 @@ var MutationPatcher = require("../patch");
 var MutationDecoder = require("../decoder");
 var NodeIndex = require("../index");
 var helpers = require("./test-helpers");
-var log = require("../log");
+
+function wait(ms = 0) {
+	return new Promise(resolve => setTimeout(resolve, ms));
+}
 
 QUnit.module("Node insertion/removal", {
 	afterEach: function(){
@@ -151,8 +154,6 @@ QUnit.test("Removing multiple sibling nodes", function(assert) {
 	helpers.fixture.el().appendChild(root);
 	var clone = root.cloneNode(true);
 
-	log.element(root);
-
 	var encoder = new MutationEncoder(root);
 	var patcher = new MutationPatcher(clone);
 
@@ -242,7 +243,7 @@ QUnit.test("A node that is inserted and removed in the same mutation", function(
 	main.removeChild(span);
 });
 
-QUnit.test("Mutations occur top-down", function(assert) {
+QUnit.skip("Mutations occur top-down", function(assert) {
 	var done = assert.async();
 
 	var root = document.createElement("div");
@@ -272,4 +273,247 @@ QUnit.test("Mutations occur top-down", function(assert) {
 	h2.removeChild(h2.firstChild);
 	h2.appendChild(document.createTextNode("Subtitle"));
 	h1.appendChild(document.createTextNode("Title"));
+});
+
+
+QUnit.test("Multiple removals and insertions", async function(assert) {
+	var done = assert.async();
+
+	function createElement(tag, text = "", attrs = []) {
+		var el = document.createElement(tag);
+		for(let pair of attrs) {
+			el.setAttribute(pair[0], pair[1]);
+		}
+		el.textContent = text;
+		return el;
+	}
+
+	function createText(text = "") {
+		return document.createTextNode(text);
+	}
+
+	var root = document.createElement("section");
+	root.innerHTML = '<ul>\n</ul>';
+	helpers.fixture.el().appendChild(root);
+	var clone = root.cloneNode(true);
+
+	var encoder = new MutationEncoder(root);
+	var patcher = new MutationPatcher(clone);
+
+	var mo = new MutationObserver(function(records) {
+		var bytes = encoder.encode(records);
+
+		try {
+			patcher.patch(bytes);
+			assert.ok(true, "patch successful");
+		} catch(err) {
+			assert.ok(false, err);
+		}
+	});
+
+	mo.observe(root, { childList: true, subtree: true});
+
+	{
+		let ul = root.firstChild;
+		let frag = document.createDocumentFragment();
+		frag.appendChild(createText("\n"));
+		frag.appendChild(createElement("li", "", [["class", "active"]]));
+		frag.appendChild(createText("\n"));
+		ul.replaceChild(frag, ul.firstChild);
+
+		frag = document.createDocumentFragment();
+		frag.appendChild(createText("\n"));
+		frag.appendChild(createElement("li", "", [["class", "active"]]));
+		frag.appendChild(createText("\n"));
+		frag.appendChild(createText("\n"));
+		frag.appendChild(createElement("li"));
+		frag.appendChild(createText("\n"));
+		ul.appendChild(frag);
+
+		ul.removeChild(ul.firstChild); // #text
+		ul.removeChild(ul.firstChild); // <li.active>
+		ul.removeChild(ul.firstChild); // #text
+	}
+
+	await wait();
+	done();
+});
+
+
+QUnit.test("Applying changes to a full app load", async function(assert) {
+	var done = assert.async();
+
+	function createElement(tag, text = "", attrs = []) {
+		var el = root.createElement(tag);
+		for(let pair of attrs) {
+			el.setAttribute(pair[0], pair[1]);
+		}
+		el.textContent = text;
+		return el;
+	}
+
+	function createText(text = "") {
+		return root.createTextNode(text);
+	}
+
+	var root = document.implementation.createHTMLDocument("Test");
+	root.head.innerHTML = `
+		<title>Test</title>
+	`;
+	root.documentElement.insertBefore(createText("\n"), root.body);
+	root.body.innerHTML = `
+		<script>"use strict";</script>
+		<script></script>
+	`;
+	var clone = root.cloneNode(true);
+
+	var encoder = new MutationEncoder(root);
+	var patcher = new MutationPatcher(clone);
+
+	var mo = new MutationObserver(function(records) {
+		var bytes = encoder.encode(records);
+
+		try {
+			patcher.patch(bytes);
+			assert.ok(true, "patch successful");
+		} catch(err) {
+			assert.ok(false, err);
+		}
+	});
+
+	mo.observe(root, { childList: true, subtree: true});
+
+	root.head.appendChild(createElement("style", "body {}"));
+	root.head.appendChild(createElement("style", "body {}"));
+
+
+	await wait();
+
+	root.head.appendChild(createElement("style", "body {}"));
+
+	await wait();
+
+	root.head.removeChild(root.head.firstChild); // #text
+	root.head.removeChild(root.head.firstChild); // <title>
+	root.head.removeChild(root.head.firstChild); // #text
+	root.head.appendChild(root.createTextNode("\n")); // #text
+	root.head.appendChild(createElement("title", "New title")); // <title>
+	root.head.appendChild(root.createTextNode("\n")); // #text
+
+	// Remove text nodes before/after scripts
+	root.body.removeChild(root.body.firstChild); // #text
+	root.body.removeChild(root.body.firstChild.nextSibling); // #text
+	root.body.removeChild(root.body.firstChild.nextSibling.nextSibling); // #text
+
+	root.body.appendChild(createText("\n")); // #text
+	root.body.appendChild(createElement("can-import")); // <can-import>
+	root.body.appendChild(createText("\n")); // #text
+	root.body.appendChild(createElement("can-import")); // <can-import>
+	root.body.appendChild(createText("\n")); // #text
+	root.body.appendChild(createElement("can-import")); // <can-import>
+	root.body.appendChild(createText("\n")); // #text
+	{
+		let container = createElement("div", "", [["class", "container"]]);
+		container.appendChild(createText("\n"));
+		{
+			let row = createElement("div", "", [["class", "row"]]);
+			row.appendChild(createText("\n"));
+			{
+				let col = createElement("div", "", [["class", ".col-sm-8.col-sm-offset-2"]]);
+				col.appendChild(createText("\n"));
+				col.appendChild(createText("\n"));
+				{
+					let chat = createElement("chat-home");
+					chat.appendChild(createText("\n"));
+					chat.appendChild(createElement("can-import"));
+					chat.appendChild(createText("\n"));
+					chat.appendChild(createElement("can-import"));
+					chat.appendChild(createText("\n"));
+					chat.appendChild(createElement("h1"));
+					chat.appendChild(createText("\n"));
+					{
+						let bitTabs = createElement("bit-tabs");
+						bitTabs.appendChild(createText("\n"));
+						bitTabs.appendChild(createText("\n"));
+						{
+							let ul = createElement("ul", "", [["class", "nav nav-tabs"]]);
+							ul.appendChild(createText("\n"));
+							bitTabs.appendChild(ul);
+						}
+						bitTabs.appendChild(createText("\n"));
+						{
+							let panel = createElement("bit-panel");
+							panel.appendChild(createText("\n"));
+							bitTabs.appendChild(panel);
+						}
+						bitTabs.appendChild(createText("\n"));
+						{
+							let panel = createElement("bit-panel");
+							panel.appendChild(createText("\n"));
+							bitTabs.appendChild(panel);
+						}
+						bitTabs.appendChild(createText("\n"));
+						bitTabs.appendChild(createText("\n"));
+						chat.appendChild(bitTabs);
+					}
+					chat.appendChild(createText("\n"));
+					chat.appendChild(createElement("a", "", [["class", "btn"]]));
+					chat.appendChild(createText("\n"));
+					col.appendChild(chat);
+				}
+				col.appendChild(createText("\n"));
+				col.appendChild(createText("\n"));
+				row.appendChild(col);
+			}
+			row.appendChild(createText("\n"));
+			container.appendChild(row);
+		}
+		container.appendChild(createText("\n"));
+		root.body.appendChild(container);
+	}
+	root.body.appendChild(createText("\n")); // #text
+	root.body.appendChild(createText("\n")); // #text
+	root.body.appendChild(createText("\n")); // #text
+	root.body.appendChild(createText("\n")); // #text
+	root.body.appendChild(createText("\n")); // #text
+	root.body.appendChild(createText("\n")); // #text
+	root.body.appendChild(createText("\n")); // #text
+	root.body.appendChild(createText("\n")); // #text
+
+	await wait();
+
+	// Replace the text node if bit-panel with some text
+	{
+		let frag = root.createDocumentFragment();
+		frag.appendChild(createText("\n"));
+		frag.appendChild(createElement("p", "panel one"));
+		frag.appendChild(createText("\n"));
+		let bitPanel = root.querySelector("bit-panel");
+		bitPanel.replaceChild(frag, bitPanel.firstChild);
+	}
+
+	{
+		let ul = root.querySelector(".nav-tabs");
+		let frag = root.createDocumentFragment();
+		frag.appendChild(createText("\n"));
+		frag.appendChild(createElement("li", "", [["class", "active"]]));
+		frag.appendChild(createText("\n"));
+		ul.replaceChild(frag, ul.firstChild);
+
+		frag = root.createDocumentFragment();
+		frag.appendChild(createText("\n"));
+		frag.appendChild(createElement("li", "", [["class", "active"]]));
+		frag.appendChild(createText("\n"));
+		frag.appendChild(createText("\n"));
+		frag.appendChild(createElement("li"));
+		frag.appendChild(createText("\n"));
+		ul.appendChild(frag);
+
+		ul.removeChild(ul.firstChild); // #text
+		ul.removeChild(ul.firstChild); // <li.active>
+		ul.removeChild(ul.firstChild); // #text
+	}
+
+	await wait();
+	done();
 });
