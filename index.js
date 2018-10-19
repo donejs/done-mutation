@@ -107,7 +107,6 @@ class NodeIndex {
 	purge(node) {
 		// TODO this should do something different...
 		let index = this.for(node);
-		this.reIndexFrom(node);
 		this.map.delete(node);
 		this.parentMap.delete(node);
 		return index;
