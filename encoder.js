@@ -66,11 +66,12 @@ function* encodeNode(node) {
 }
 
 class MutationEncoder {
-	constructor(rootOrIndex) {
+	constructor(rootOrIndex, options = { collapseTextNodes: false }) {
+		this.collapseTextNodes = options.collapseTextNodes;
 		if(rootOrIndex instanceof NodeIndex) {
 			this.index = rootOrIndex;
 		} else {
-			this.index = new NodeIndex(rootOrIndex);
+			this.index = new NodeIndex(rootOrIndex, options);
 		}
 
 		this._indexed = false;
@@ -86,6 +87,7 @@ class MutationEncoder {
 
 	*mutations(records) {
 		const index = this.index;
+		const collapseTextNodes = this.collapseTextNodes;
 		const removedNodes = new WeakSet();
 
 		let i = 0, iLen = records.length;
@@ -145,7 +147,7 @@ class MutationEncoder {
 
 							yield tags.Insert;
 							yield* toUint8(parentIndex);
-							yield* toUint8(getChildIndex(node.parentNode, node)); // ref
+							yield* toUint8(getChildIndex(node.parentNode, node, collapseTextNodes)); // ref
 							yield* encodeNode(node);
 						} else {
 							// No parent means it was removed in the same mutation.
@@ -218,14 +220,25 @@ class MutationEncoder {
 	}
 }
 
-function getChildIndex(parent, child) {
-	let index = 0;
+function getChildIndex(parent, child, collapseTextNodes) {
+	let index = -1;
 	let node = parent.firstChild;
+	let prev;
 	while(node) {
+		let increment = true;
+		if(collapseTextNodes && prev && prev.nodeType === 3 && node.nodeType === 3) {
+			increment = false;
+		}
+
+		if(increment) {
+			index++;
+		}
+
 		if(node === child) {
 			return index;
 		}
-		index++;
+
+		prev = node;
 		node = node.nextSibling;
 	}
 	return -1;

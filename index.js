@@ -1,10 +1,11 @@
 const parentSymbol = Symbol.for("done.parentNode");
 
 class NodeIndex {
-	constructor(root) {
+	constructor(root, options = { collapseTextNodes: false }) {
 		this.root = root;
 		this.map = new WeakMap();
 		this.parentMap = new WeakMap();
+		this.collapseTextNodes = options.collapseTextNodes;
 		this.walk(root);
 		this._onMutations = this._onMutations.bind(this);
 	}
@@ -32,6 +33,7 @@ class NodeIndex {
 
 	// Based on https://gist.github.com/cowboy/958000
 	walk(node, startIndex = 0) {
+		let collapseTextNodes = this.collapseTextNodes;
 		let skip, tmp;
 		let parentIndex = new Map();
 		parentIndex.set(node, 0);
@@ -55,19 +57,39 @@ class NodeIndex {
 				this.parentMap.set(tmp, 0);
 				tmp[parentSymbol] = node;
 
-				index++;
+
+				let incrementIndex = true;
+				if(collapseTextNodes && node.nodeName === "HTML" &&
+					(node.firstChild && node.firstChild.nodeType === 3)) {
+					incrementIndex = false;
+				}
+
+				if(incrementIndex) {
+					index++;
+				}
 			} else if ( tmp = node.nextSibling ) {
 				// If skipping or there is no first child, get the next sibling. If
 				// there is a next sibling, reset the skip flag.
 				skip = false;
 				this.map.set(tmp, index);
 
-				let parentI = parentIndex.get(tmp.parentNode) + 1;
+				let incrementIndex = true;
+				let parentI = parentIndex.get(tmp.parentNode);
+
+				if(collapseTextNodes && tmp.nodeType === 3 && node.nodeType === 3) {
+					incrementIndex = false;
+				} else {
+					parentI = parentI + 1;
+				}
+
 				parentIndex.set(tmp.parentNode, parentI);
 				this.parentMap.set(tmp, parentI);
+
 				tmp[parentSymbol] = tmp.parentNode;
 
-				index++;
+				if(incrementIndex) {
+					index++;
+				}
 			} else {
 				// Skipped or no first child and no next sibling, so traverse upwards,
 				tmp = node.parentNode;
