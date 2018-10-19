@@ -1,6 +1,15 @@
 const MutationEncoder = require("./encoder");
 const MutationDecoder = require("./decoder");
 
+exports.instructions = function(bytes) {
+	let decoder = new MutationDecoder(document);
+	console.group("Mutations");
+	for(let mutation of decoder.decode(bytes)) {
+		console.log(mutation);
+	}
+	console.groupEnd();
+};
+
 exports.element = function(root) {
 	let encoder = new MutationEncoder(root);
 	let decoder = new MutationDecoder(root.ownerDocument);
