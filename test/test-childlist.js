@@ -1,4 +1,5 @@
 var QUnit = require("steal-qunit");
+var cloneUtils = require("ir-clone");
 var MutationEncoder = require("../encoder");
 var MutationPatcher = require("../patch");
 var MutationDecoder = require("../decoder");
@@ -517,28 +518,30 @@ QUnit.test("Applying changes to a full app load", async function(assert) {
 	done();
 });
 
-QUnit.test("collapseTextNodes", function(assert) {
+QUnit.test("Consecutive TextNodes and replacement", function(assert) {
 	var done = assert.async();
 
 	var root = document.createElement("div");
 	root.appendChild(document.createTextNode("\n"));
 	root.appendChild(document.createTextNode(""));
 	var h1 = document.createElement("h1");
-	h1.appendChild(document.createTextNode(""));
+	h1.appendChild(document.createTextNode("\n"));
 	h1.appendChild(document.createTextNode("first"));
 	root.appendChild(h1);
 	helpers.fixture.el().appendChild(root);
 	var clone = root.cloneNode();
-	clone.innerHTML = root.innerHTML;
+	clone.innerHTML = cloneUtils.serializeToString(root);
 
-	var encoder = new MutationEncoder(root, { collapseTextNodes: true });
+	var encoder = new MutationEncoder(root);
 	var patcher = new MutationPatcher(clone);
 
 	var mo = new MutationObserver(function(records) {
 		var bytes = encoder.encode(records);
 		patcher.patch(bytes);
 
-		assert.equal(clone.textContent.trim(), "second");
+		var h1 = clone.querySelector("h1");
+		assert.equal(h1.childNodes.length, 2, "There are two TextNodes");
+		assert.equal(h1.firstChild.nextSibling.nodeValue, "second");
 		done();
 	});
 
@@ -549,21 +552,21 @@ QUnit.test("collapseTextNodes", function(assert) {
 });
 
 
-QUnit.test("collapseTextNodes when Text is inserted after", function(assert) {
+QUnit.test("Consecutive TextNodes and appending", function(assert) {
 	var done = assert.async();
 
 	var root = document.createElement("div");
 	root.appendChild(document.createTextNode("\n"));
 	root.appendChild(document.createTextNode(""));
 	var h1 = document.createElement("h1");
-	h1.appendChild(document.createTextNode(""));
+	h1.appendChild(document.createTextNode("\n"));
 	h1.appendChild(document.createTextNode("first"));
 	root.appendChild(h1);
 	helpers.fixture.el().appendChild(root);
 	var clone = root.cloneNode();
-	clone.innerHTML = root.innerHTML;
+	clone.innerHTML = cloneUtils.serializeToString(root);
 
-	var encoder = new MutationEncoder(root, { collapseTextNodes: true });
+	var encoder = new MutationEncoder(root);
 	var patcher = new MutationPatcher(clone);
 
 	var mo = new MutationObserver(function(records) {

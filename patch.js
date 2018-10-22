@@ -3,6 +3,10 @@ const {
 } = require("./decode");
 const tags = require("./tags");
 
+function sepNode(node) {
+	return node.nodeType === 8 && node.nodeValue === "__DONEJS-SEP__";
+}
+
 function* walk(root, nextIndex) {
 	const document = getDocument(root);
 	const walker = document.createTreeWalker(root, -1);
@@ -15,6 +19,11 @@ function* walk(root, nextIndex) {
 		} else if(index < nextIndex) {
 			index++;
 			currentNode = walker.nextNode();
+			if(sepNode(currentNode)) {
+				var removeNode = currentNode;
+				currentNode = walker.nextNode();
+				removeNode.parentNode.removeChild(removeNode);
+			}
 		} else {
 			index--;
 			currentNode = walker.previousNode();
@@ -100,6 +109,12 @@ function getChild(parent, index) {
 	while(i < index) {
 		i++;
 		child = child.nextSibling;
+
+		if(child && sepNode(child)) {
+			var node = child;
+			child = child.nextSibling;
+			node.parentNode.removeChild(node);
+		}
 	}
 	return child;
 }

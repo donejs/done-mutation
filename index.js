@@ -1,19 +1,12 @@
 const parentSymbol = Symbol.for("done.parentNode");
-const { markInitial, shouldIncrementIndex } = require("./textnodes");
 
 class NodeIndex {
-	constructor(root, options = { collapseTextNodes: false }) {
+	constructor(root) {
 		this.root = root;
 		this.map = new WeakMap();
 		this.parentMap = new WeakMap();
-		this.collapseTextNodes = options.collapseTextNodes;
-		this.walk(root, 0, true);
+		this.walk(root);
 		this._onMutations = this._onMutations.bind(this);
-	}
-
-	// @public Walk the entire tree
-	walkTree(markInitialTextNodes = true) {
-		this.walk(this.root, 0, markInitialTextNodes);
 	}
 
 	reIndexFrom() {
@@ -38,8 +31,7 @@ class NodeIndex {
 	}
 
 	// Based on https://gist.github.com/cowboy/958000
-	walk(node, startIndex = 0, markInitialTextNodes = false) {
-		let collapseTextNodes = this.collapseTextNodes;
+	walk(node, startIndex = 0) {
 		let skip, tmp;
 		let parentIndex = new Map();
 		parentIndex.set(node, 0);
@@ -62,41 +54,20 @@ class NodeIndex {
 				parentIndex.set(node, 0);
 				this.parentMap.set(tmp, 0);
 				tmp[parentSymbol] = node;
-				markInitial(markInitialTextNodes, tmp);
-
-				let incrementIndex = true;
-				if(collapseTextNodes && node.nodeName === "HTML" &&
-					(node.firstChild && node.firstChild.nodeType === 3)) {
-					incrementIndex = false;
-				}
-
-				if(incrementIndex) {
-					index++;
-				}
+				index++;
 			} else if ( tmp = node.nextSibling ) {
 				// If skipping or there is no first child, get the next sibling. If
 				// there is a next sibling, reset the skip flag.
 				skip = false;
 				this.map.set(tmp, index);
 
-				markInitial(markInitialTextNodes, tmp);
-				let incrementIndex = true;
-				let parentI = parentIndex.get(tmp.parentNode);
 
-				if(shouldIncrementIndex(collapseTextNodes, tmp, node)) {
-					parentI = parentI + 1;
-				} else {
-					incrementIndex = false;
-				}
-
+				let parentI = parentIndex.get(tmp.parentNode) + 1;
 				parentIndex.set(tmp.parentNode, parentI);
 				this.parentMap.set(tmp, parentI);
 
 				tmp[parentSymbol] = tmp.parentNode;
-
-				if(incrementIndex) {
-					index++;
-				}
+				index++;
 			} else {
 				// Skipped or no first child and no next sibling, so traverse upwards,
 				tmp = node.parentNode;
@@ -174,4 +145,3 @@ class NodeIndex {
 
 
 module.exports = NodeIndex;
-module.exports.shouldIncrementIndex = shouldIncrementIndex;
