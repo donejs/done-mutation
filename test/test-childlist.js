@@ -518,7 +518,7 @@ QUnit.test("Applying changes to a full app load", async function(assert) {
 	done();
 });
 
-QUnit.test("collapseTextNodes", function(assert) {
+QUnit.test("Consecutive TextNodes and replacement", function(assert) {
 	var done = assert.async();
 
 	var root = document.createElement("div");
@@ -552,7 +552,7 @@ QUnit.test("collapseTextNodes", function(assert) {
 });
 
 
-QUnit.test("collapseTextNodes when Text is inserted after", function(assert) {
+QUnit.test("Consecutive TextNodes and appending", function(assert) {
 	var done = assert.async();
 
 	var root = document.createElement("div");

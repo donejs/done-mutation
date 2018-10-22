@@ -1,6 +1,5 @@
 const tags = require("./tags");
 const NodeIndex = require("./index");
-const { shouldIncrementIndex, updateSiblings } = require("./textnodes");
 
 function* toUint8(n) {
 	yield ((n >> 8) & 0xff); // high
@@ -67,12 +66,11 @@ function* encodeNode(node) {
 }
 
 class MutationEncoder {
-	constructor(rootOrIndex, options = { collapseTextNodes: false }) {
-		this.collapseTextNodes = options.collapseTextNodes;
+	constructor(rootOrIndex) {
 		if(rootOrIndex instanceof NodeIndex) {
 			this.index = rootOrIndex;
 		} else {
-			this.index = new NodeIndex(rootOrIndex, options);
+			this.index = new NodeIndex(rootOrIndex);
 		}
 
 		this._indexed = false;
@@ -88,7 +86,6 @@ class MutationEncoder {
 
 	*mutations(records) {
 		const index = this.index;
-		const collapseTextNodes = this.collapseTextNodes;
 		const removedNodes = new WeakSet();
 
 		let i = 0, iLen = records.length;
@@ -136,7 +133,6 @@ class MutationEncoder {
 
 						let [parentIndex, childIndex] = index.fromParent(node);
 						index.purge(node);
-						updateSiblings(node, record);
 						yield tags.Remove;
 						yield* toUint8(parentIndex);
 						yield* toUint8(childIndex);
@@ -149,7 +145,7 @@ class MutationEncoder {
 
 							yield tags.Insert;
 							yield* toUint8(parentIndex);
-							yield* toUint8(getChildIndex(node.parentNode, node, collapseTextNodes)); // ref
+							yield* toUint8(getChildIndex(node.parentNode, node)); // ref
 							yield* encodeNode(node);
 						} else {
 							// No parent means it was removed in the same mutation.
@@ -227,14 +223,7 @@ function getChildIndex(parent, child, collapseTextNodes) {
 	let node = parent.firstChild;
 	let prev;
 	while(node) {
-		let increment = true;
-		if(!shouldIncrementIndex(collapseTextNodes, node, prev)) {
-			increment = false;
-		}
-
-		if(increment) {
-			index++;
-		}
+		index++;
 
 		if(node === child) {
 			return index;
