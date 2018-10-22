@@ -10,8 +10,8 @@ exports.instructions = function(bytes) {
 	console.groupEnd();
 };
 
-exports.element = function(root) {
-	let encoder = new MutationEncoder(root);
+exports.element = function(root, options) {
+	let encoder = new MutationEncoder(root, options);
 	let decoder = new MutationDecoder(root.ownerDocument);
 
 	function callback(records) {

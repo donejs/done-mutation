@@ -1,5 +1,6 @@
 const tags = require("./tags");
 const NodeIndex = require("./index");
+const { shouldIncrementIndex, updateSiblings } = require("./textnodes");
 
 function* toUint8(n) {
 	yield ((n >> 8) & 0xff); // high
@@ -135,6 +136,7 @@ class MutationEncoder {
 
 						let [parentIndex, childIndex] = index.fromParent(node);
 						index.purge(node);
+						updateSiblings(node, record);
 						yield tags.Remove;
 						yield* toUint8(parentIndex);
 						yield* toUint8(childIndex);
@@ -226,7 +228,7 @@ function getChildIndex(parent, child, collapseTextNodes) {
 	let prev;
 	while(node) {
 		let increment = true;
-		if(collapseTextNodes && prev && prev.nodeType === 3 && node.nodeType === 3) {
+		if(!shouldIncrementIndex(collapseTextNodes, node, prev)) {
 			increment = false;
 		}
 
@@ -247,6 +249,5 @@ function getChildIndex(parent, child, collapseTextNodes) {
 function isRemovalRecord(record) {
 	return record.removedNodes.length > 0 && record.addedNodes.length === 0;
 }
-
 
 module.exports = MutationEncoder;

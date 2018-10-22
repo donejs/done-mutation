@@ -1,4 +1,5 @@
 const parentSymbol = Symbol.for("done.parentNode");
+const { markInitial, shouldIncrementIndex } = require("./textnodes");
 
 class NodeIndex {
 	constructor(root, options = { collapseTextNodes: false }) {
@@ -6,8 +7,13 @@ class NodeIndex {
 		this.map = new WeakMap();
 		this.parentMap = new WeakMap();
 		this.collapseTextNodes = options.collapseTextNodes;
-		this.walk(root);
+		this.walk(root, 0, true);
 		this._onMutations = this._onMutations.bind(this);
+	}
+
+	// @public Walk the entire tree
+	walkTree(markInitialTextNodes = true) {
+		this.walk(this.root, 0, markInitialTextNodes);
 	}
 
 	reIndexFrom() {
@@ -32,7 +38,7 @@ class NodeIndex {
 	}
 
 	// Based on https://gist.github.com/cowboy/958000
-	walk(node, startIndex = 0) {
+	walk(node, startIndex = 0, markInitialTextNodes = false) {
 		let collapseTextNodes = this.collapseTextNodes;
 		let skip, tmp;
 		let parentIndex = new Map();
@@ -56,7 +62,7 @@ class NodeIndex {
 				parentIndex.set(node, 0);
 				this.parentMap.set(tmp, 0);
 				tmp[parentSymbol] = node;
-
+				markInitial(markInitialTextNodes, tmp);
 
 				let incrementIndex = true;
 				if(collapseTextNodes && node.nodeName === "HTML" &&
@@ -73,13 +79,14 @@ class NodeIndex {
 				skip = false;
 				this.map.set(tmp, index);
 
+				markInitial(markInitialTextNodes, tmp);
 				let incrementIndex = true;
 				let parentI = parentIndex.get(tmp.parentNode);
 
-				if(collapseTextNodes && tmp.nodeType === 3 && node.nodeType === 3) {
-					incrementIndex = false;
-				} else {
+				if(shouldIncrementIndex(collapseTextNodes, tmp, node)) {
 					parentI = parentI + 1;
+				} else {
+					incrementIndex = false;
 				}
 
 				parentIndex.set(tmp.parentNode, parentI);
@@ -164,4 +171,7 @@ class NodeIndex {
 	}
 }
 
+
+
 module.exports = NodeIndex;
+module.exports.shouldIncrementIndex = shouldIncrementIndex;
