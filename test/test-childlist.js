@@ -523,7 +523,7 @@ QUnit.test("Consecutive TextNodes and replacement", function(assert) {
 
 	var root = document.createElement("div");
 	root.appendChild(document.createTextNode("\n"));
-	root.appendChild(document.createTextNode(""));
+	root.appendChild(document.createTextNode("\n"));
 	var h1 = document.createElement("h1");
 	h1.appendChild(document.createTextNode("\n"));
 	h1.appendChild(document.createTextNode("first"));
@@ -531,6 +531,7 @@ QUnit.test("Consecutive TextNodes and replacement", function(assert) {
 	helpers.fixture.el().appendChild(root);
 	var clone = root.cloneNode();
 	clone.innerHTML = cloneUtils.serializeToString(root);
+	clone = clone.firstChild;
 
 	var encoder = new MutationEncoder(root);
 	var patcher = new MutationPatcher(clone);
@@ -565,6 +566,7 @@ QUnit.test("Consecutive TextNodes and appending", function(assert) {
 	helpers.fixture.el().appendChild(root);
 	var clone = root.cloneNode();
 	clone.innerHTML = cloneUtils.serializeToString(root);
+	clone = clone.firstChild;
 
 	var encoder = new MutationEncoder(root);
 	var patcher = new MutationPatcher(clone);
