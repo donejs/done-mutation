@@ -218,7 +218,7 @@ class MutationEncoder {
 	}
 }
 
-function getChildIndex(parent, child, collapseTextNodes) {
+function getChildIndex(parent, child) {
 	let index = -1;
 	let node = parent.firstChild;
 	let prev;
