@@ -9,6 +9,10 @@ class NodeIndex {
 		this._onMutations = this._onMutations.bind(this);
 	}
 
+	reindex() {
+		this.walk(this.root);
+	}
+
 	reIndexFrom() {
 		// TODO make this not horrible.
 		// This should walk up the parents until it finds a parent without

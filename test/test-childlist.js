@@ -523,7 +523,7 @@ QUnit.test("Consecutive TextNodes and replacement", function(assert) {
 
 	var root = document.createElement("div");
 	root.appendChild(document.createTextNode("\n"));
-	root.appendChild(document.createTextNode(""));
+	root.appendChild(document.createTextNode("\n"));
 	var h1 = document.createElement("h1");
 	h1.appendChild(document.createTextNode("\n"));
 	h1.appendChild(document.createTextNode("first"));
@@ -531,6 +531,7 @@ QUnit.test("Consecutive TextNodes and replacement", function(assert) {
 	helpers.fixture.el().appendChild(root);
 	var clone = root.cloneNode();
 	clone.innerHTML = cloneUtils.serializeToString(root);
+	clone = clone.firstChild;
 
 	var encoder = new MutationEncoder(root);
 	var patcher = new MutationPatcher(clone);
@@ -565,6 +566,7 @@ QUnit.test("Consecutive TextNodes and appending", function(assert) {
 	helpers.fixture.el().appendChild(root);
 	var clone = root.cloneNode();
 	clone.innerHTML = cloneUtils.serializeToString(root);
+	clone = clone.firstChild;
 
 	var encoder = new MutationEncoder(root);
 	var patcher = new MutationPatcher(clone);
@@ -580,4 +582,30 @@ QUnit.test("Consecutive TextNodes and appending", function(assert) {
 	mo.observe(root, { childList: true, subtree: true});
 
 	h1.appendChild(document.createTextNode("second"));
+});
+
+QUnit.test("NodeIndex exposes a reindex function", function(assert) {
+	var done = assert.async();
+
+	var root = document.createElement("div");
+	helpers.fixture.el().appendChild(root);
+	var clone = root.cloneNode(true);
+
+	var index = new NodeIndex(root);
+	var encoder = new MutationEncoder(index);
+	var decoder = new MutationDecoder(root.ownerDocument);
+
+	var article = document.createElement("article");
+	root.appendChild(article);
+
+	var mo = new MutationObserver(function(records) {
+		var instr = Array.from(decoder.decode(encoder.encode(records)));
+		assert.equal(instr.length, 1, "There is one mutation instruction");
+		assert.equal(instr[0].node.nodeName, "SPAN", "span mutation observed");
+		done();
+	});
+
+	index.reindex();
+	mo.observe(root, { subtree: true, childList: true });
+	article.appendChild(document.createElement("span"));
 });
