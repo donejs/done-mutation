@@ -7,3 +7,4 @@
 { type: "add", index: 3 }
 { type: "characterData": index 4 }
 { type: "attributes": index 4 }
+```

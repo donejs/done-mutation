@@ -377,6 +377,7 @@ QUnit.test("Applying changes to a full app load", async function(assert) {
 			patcher.patch(bytes);
 			assert.ok(true, "patch successful");
 		} catch(err) {
+			console.error(err);
 			assert.ok(false, err);
 		}
 	});
@@ -385,12 +386,9 @@ QUnit.test("Applying changes to a full app load", async function(assert) {
 
 	root.head.appendChild(createElement("style", "body {}"));
 	root.head.appendChild(createElement("style", "body {}"));
-
-
 	await wait();
 
 	root.head.appendChild(createElement("style", "body {}"));
-
 	await wait();
 
 	root.head.removeChild(root.head.firstChild); // #text
@@ -479,7 +477,6 @@ QUnit.test("Applying changes to a full app load", async function(assert) {
 	root.body.appendChild(createText("\n")); // #text
 	root.body.appendChild(createText("\n")); // #text
 	root.body.appendChild(createText("\n")); // #text
-
 	await wait();
 
 	// Replace the text node if bit-panel with some text
@@ -608,4 +605,38 @@ QUnit.test("NodeIndex exposes a reindex function", function(assert) {
 	index.reindex();
 	mo.observe(root, { subtree: true, childList: true });
 	article.appendChild(document.createElement("span"));
+});
+
+QUnit.test("Inserting an element and that replaces another", function(assert) {
+	var done = assert.async();
+
+	var doc = document.createElement("div");
+	var root = document.createElement("div");
+	doc.appendChild(root);
+	var main = document.createElement("main");
+	main.setAttribute("id", "main1");
+	root.appendChild(main);
+	helpers.fixture.el().appendChild(doc);
+	var clone = doc.cloneNode(true);
+
+	var encoder = new MutationEncoder(doc);
+	var patcher = new MutationPatcher(clone);
+
+	function patch(records) {
+		var bytes = encoder.encode(records);
+		patcher.patch(bytes);
+	}
+
+	var mo = new MutationObserver(function(records){
+		patch(records);
+
+		assert.equal(clone.firstChild.firstChild.id, "main2", "Main2 replaces main1");
+		done();
+	});
+	mo.observe(root, { subtree: true, childList: true });
+
+	var main2 = document.createElement("main");
+	main2.setAttribute("id", "main2");
+	root.appendChild(main2);
+	root.removeChild(main);
 });

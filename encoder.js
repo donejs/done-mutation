@@ -65,6 +65,98 @@ function* encodeNode(node) {
 	}
 }
 
+function* encodeRemovalMutation(node, parentIndex, childIndex) {
+	yield tags.Remove;
+	yield* toUint8(parentIndex);
+	yield* toUint8(childIndex);
+}
+
+function* encodeAddedMutation(node, parentIndex, childIndex) {
+	yield tags.Insert;
+	yield* toUint8(parentIndex);
+	yield* toUint8(childIndex); // ref
+	yield* encodeNode(node);
+}
+
+function* encodeCharacterMutation(node, parentIndex) {
+	yield tags.Text;
+	yield* toUint8(parentIndex);
+	yield* encodeString(node.nodeValue);
+}
+
+function* encodeAttributeMutation(record, parentIndex) {
+	let attributeValue = record.target.getAttribute(record.attributeName);
+	if(attributeValue == null) {
+		yield tags.RemoveAttr;
+		yield* toUint8(parentIndex);
+		yield* encodeString(record.attributeName);
+	} else {
+		yield tags.SetAttr;
+		yield* toUint8(parentIndex);
+		yield* encodeString(record.attributeName);
+		yield* encodeString(attributeValue);
+	}
+}
+
+function sortMutations(a, b) {
+	let aType = a[0];
+	let bType = b[0];
+	let aIndex = a[1];
+	let bIndex = b[1];
+
+	if(aIndex > bIndex) {
+		return -1;
+	} else if(aIndex < bIndex) {
+		return 1;
+	}
+
+	if(aType === 0) {
+		if(bType === 0) {
+			let aChild = a[3];
+			let bChild = b[3];
+
+			if(aIndex >= bIndex) {
+				if(aChild > bChild) {
+					return -1;
+				} else {
+					return 1;
+				}
+			} else {
+				return 1;
+			}
+		} else {
+			return -1;
+		}
+	}
+	else if(aType === 1) {
+		if(bType === 1) {
+			let aChild = a[3];
+			let bChild = b[3];
+
+			if(aIndex >= bIndex) {
+				if(aChild > bChild) {
+					return 1;
+				} else {
+					return -1;
+				}
+			} else {
+				return -1;
+			}
+		} else if(bType === 0) {
+			return 1;
+		} else {
+			return -1;
+		}
+	}
+	else {
+		if(aType > bType) {
+			return 1;
+		} else {
+			return -1;
+		}
+	}
+}
+
 class MutationEncoder {
 	constructor(rootOrIndex) {
 		if(rootOrIndex instanceof NodeIndex) {
@@ -87,43 +179,12 @@ class MutationEncoder {
 	*mutations(records) {
 		const index = this.index;
 		const removedNodes = new WeakSet();
+		const instructions = [];
 
-		let i = 0, iLen = records.length;
-		let rangeStart = null, rangeEnd = null;
-
-		//for(;i < iLen; i++) {
-		while(i < iLen) {
-			let record = records[i];
-			let j, jLen;
-
+		for(let record of records) {
 			switch(record.type) {
 				case "childList":
-					// This adjusts the index so that we do removals in reverse order
-					// Let's say we had an array of mutations like:
-					// [{removedNodes:[1]}, {removedNodes:[2]}, {removedNodes:[3]}
-					// {addedNodes:[1]}, {addedNodes:[2]}, {addedNodes:[3]}]
-					// We want to do all of the removals first, in reverse order
-					// And then proceed to the addedNode records.
-					// This is achieved by keeping a start and end index for the
-					// removal groupings
-					if(isRemovalRecord(record)) {
-						if(rangeStart == null) {
-							rangeStart = i;
-						}
-						if(rangeEnd == null) {
-							let nextRecord = records[i + 1];
-							if(nextRecord && isRemovalRecord(nextRecord)) {
-								i++;
-								continue;
-							} else {
-								rangeEnd = i;
-							}
-						}
-					}
-
-					for(j = 0, jLen = record.removedNodes.length; j < jLen; j++) {
-						let node = record.removedNodes[j];
-
+					for(let node of record.removedNodes) {
 						// If part of this set, it means that this node
 						// was inserted and removed in the same Mutation event
 						// in this case nothing needs to be encoded.
@@ -133,20 +194,15 @@ class MutationEncoder {
 
 						let [parentIndex, childIndex] = index.fromParent(node);
 						index.purge(node);
-						yield tags.Remove;
-						yield* toUint8(parentIndex);
-						yield* toUint8(childIndex);
+						instructions.push([0, parentIndex, encodeRemovalMutation(node, parentIndex, childIndex), childIndex]);
 					}
 
 					for (let node of record.addedNodes) {
 						if(node.parentNode) {
 							let parentIndex = index.for(node.parentNode);
-							//index.reIndexFrom(node);
+							let childIndex = getChildIndex(node.parentNode, node);
 
-							yield tags.Insert;
-							yield* toUint8(parentIndex);
-							yield* toUint8(getChildIndex(node.parentNode, node)); // ref
-							yield* encodeNode(node);
+							instructions.push([1, parentIndex, encodeAddedMutation(node, parentIndex, childIndex), childIndex]);
 						} else {
 							// No parent means it was removed in the same mutation.
 							// Add it to this set so that the removal can be ignored.
@@ -156,46 +212,25 @@ class MutationEncoder {
 
 					break;
 				case "characterData":
-					yield tags.Text;
-					yield* toUint8(index.for(record.target));
-					yield* encodeString(record.target.nodeValue);
+					let node = record.target;
+					let parentIndex = index.for(record.target);
+					instructions.push([2, parentIndex, encodeCharacterMutation(node, parentIndex)]);
 					break;
-				case "attributes":
-					let attributeValue = record.target.getAttribute(record.attributeName);
-					if(attributeValue == null) {
-						yield tags.RemoveAttr;
-						yield* toUint8(index.for(record.target));
-						yield* encodeString(record.attributeName);
-					} else {
-						yield tags.SetAttr;
-						yield* toUint8(index.for(record.target));
-						yield* encodeString(record.attributeName);
-						yield* encodeString(attributeValue);
-					}
+				case "attributes": {
+					let parentIndex = index.for(record.target);
+					instructions.push([3, parentIndex, encodeAttributeMutation(record, parentIndex)]);
 					break;
-			}
-
-			// If there is no rangeStart/end proceed
-			if(rangeStart == null && rangeEnd == null) {
-				i++;
-			} else {
-				// If we have reached the first removal record
-				// Then all removals have been processed and we can
-				// skip ahead to the next non-removal record.
-				if(i === rangeStart) {
-					i = rangeEnd + 1;
-					rangeStart = null;
-					rangeEnd = null;
-				}
-				// Continue down to the next removal record.
-				else {
-					i--;
 				}
 			}
 		}
 
+		instructions.sort(sortMutations);
+		for(let [,,gen] of instructions) {
+			yield* gen;
+		}
+
 		// Reindex so that the next set up mutations will start from the correct indices
-		index.reIndexFrom();
+		index.reindex();
 	}
 
 	*event(event) {
@@ -233,10 +268,6 @@ function getChildIndex(parent, child) {
 		node = node.nextSibling;
 	}
 	return -1;
-}
-
-function isRemovalRecord(record) {
-	return record.removedNodes.length > 0 && record.addedNodes.length === 0;
 }
 
 module.exports = MutationEncoder;
