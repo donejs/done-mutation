@@ -13,11 +13,7 @@ class NodeIndex {
 		this.walk(this.root);
 	}
 
-	reIndexFrom() {
-		// TODO make this not horrible.
-		// This should walk up the parents until it finds a parent without
-		// Any nextSiblings.
-		let startNode = this.root;
+	reIndexFrom(startNode) {
 		this.walk(startNode);
 	}
 
@@ -140,7 +136,7 @@ class NodeIndex {
 		let index = this;
 		records.forEach(function(record){
 			record.addedNodes.forEach(function(node){
-				index.reIndexFrom(node);
+				index.reIndexFrom(node.parentNode);
 			});
 		});
 	}
