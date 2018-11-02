@@ -99,6 +99,13 @@ class NodeIndex {
 
 	fromParent(node) {
 		let parent = node[parentSymbol];
+
+		// If there is no parent it usually means the element was removed
+		// before the parent's insertion mutation occurred.
+		if(!parent) {
+			return null;
+		}
+
 		let parentIndex = this.for(parent);
 		let childIndex = this.parentMap.get(node);
 		return [parentIndex, childIndex];

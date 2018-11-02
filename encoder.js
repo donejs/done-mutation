@@ -192,9 +192,15 @@ class MutationEncoder {
 							continue;
 						}
 
-						let [parentIndex, childIndex] = index.fromParent(node);
-						index.purge(node);
-						instructions.push([0, parentIndex, encodeRemovalMutation(node, parentIndex, childIndex), childIndex]);
+						let indices = index.fromParent(node);
+						if(indices !== null) {
+							let [parentIndex, childIndex] = indices;
+							index.purge(node);
+							instructions.push([0, parentIndex,
+								encodeRemovalMutation(node, parentIndex, childIndex),
+									childIndex]);
+						}
+
 					}
 
 					for (let node of record.addedNodes) {
