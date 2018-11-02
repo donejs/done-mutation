@@ -640,3 +640,35 @@ QUnit.test("Inserting an element and that replaces another", function(assert) {
 	root.appendChild(main2);
 	root.removeChild(main);
 });
+
+QUnit.test("Element removed from parent before parent's insert occurs", function(assert) {
+	var done = assert.async();
+
+	var doc = document.createElement("div");
+	var root = document.createElement("div");
+	doc.appendChild(root);
+	helpers.fixture.el().appendChild(doc);
+	var clone = doc.cloneNode(true);
+
+	var encoder = new MutationEncoder(doc);
+	var patcher = new MutationPatcher(clone);
+
+	function patch(records) {
+		var bytes = encoder.encode(records);
+		patcher.patch(bytes);
+	}
+
+	var mo = new MutationObserver(function(records){
+		patch(records);
+
+		assert.equal(clone.firstChild.firstChild.firstChild.nodeName, "LABEL", "there's just a label");
+		done();
+	});
+	mo.observe(root, { subtree: true, childList: true });
+
+	var parent = document.createElement("main");
+	parent.appendChild(document.createElement("span"));
+	parent.appendChild(document.createElement("label"));
+	root.appendChild(parent);
+	parent.removeChild(parent.firstChild);
+})
