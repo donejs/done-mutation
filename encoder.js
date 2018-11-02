@@ -1,5 +1,6 @@
 const tags = require("./tags");
 const NodeIndex = require("./index");
+const walk = require("./walk");
 
 function* toUint8(n) {
 	yield ((n >> 8) & 0xff); // high
@@ -179,6 +180,7 @@ class MutationEncoder {
 	*mutations(records) {
 		const index = this.index;
 		const removedNodes = new WeakSet();
+		const addedNodes = new Set();
 		const instructions = [];
 
 		for(let record of records) {
@@ -204,11 +206,19 @@ class MutationEncoder {
 					}
 
 					for (let node of record.addedNodes) {
-						if(node.parentNode) {
+						// If the parent was added in this same mutation set
+						// we don't need to (and can't) encode this mutation.
+						if(addedNodes.has(node.parentNode)) {
+							continue;
+						} else if(node.parentNode) {
 							let parentIndex = index.for(node.parentNode);
 							let childIndex = getChildIndex(node.parentNode, node);
 
 							instructions.push([1, parentIndex, encodeAddedMutation(node, parentIndex, childIndex), childIndex]);
+
+							walk(node, (type, node) => {
+								addedNodes.add(node);
+							});
 						} else {
 							// No parent means it was removed in the same mutation.
 							// Add it to this set so that the removal can be ignored.
