@@ -61,6 +61,10 @@ class NodeIndex {
 		}, startIndex);
 	}
 
+	contains(node) {
+		return this.map.has(node);
+	}
+
 	// Get the cached index of a Node. If you can't find that,
 	// Walk up to a parent that is indexed. At that point index down its children.
 	for(node) {

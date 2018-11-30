@@ -59,3 +59,30 @@ QUnit.test("Removing attributes", function(assert){
 	mo.observe(root, { subtree: true, attributes: true });
 	article.removeAttribute("foo");
 });
+
+QUnit.test("Setting attributes after a node is inserted", function(assert) {
+	var done = assert.async();
+
+	var root = document.createElement("div");
+	var parent = document.createElement("section");
+	root.appendChild(parent);
+	helpers.fixture.el().appendChild(root);
+	var clone = root.cloneNode(true);
+
+	var encoder = new MutationEncoder(root);
+	var patcher = new MutationPatcher(clone);
+
+	var mo = new MutationObserver(function(records) {
+		patcher.patch(encoder.encode(records));
+		assert.equal(clone.firstChild.firstChild.getAttribute("id"), "my-id");
+		done();
+	});
+
+	mo.observe(root, { childList: true, subtree: true, attributes: true });
+
+	var article = document.createElement("article");
+	article.appendChild(document.createTextNode("Article"));
+	parent.appendChild(article);
+
+	article.setAttribute("id", "my-id");
+});

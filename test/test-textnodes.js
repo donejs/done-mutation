@@ -110,3 +110,30 @@ QUnit.test("Large trees that exceed 255 index", function(assert) {
 	mo.observe(doc1, { childList: true, subtree: true, characterData: true });
 	doc1.body.lastChild.firstChild.nodeValue = "new value";
 });
+
+QUnit.test("Changing nodeValue before parent is inserted", function(assert) {
+	var done = assert.async();
+
+	var root = document.createElement("div");
+	var parent = document.createElement("section");
+	root.appendChild(parent);
+	helpers.fixture.el().appendChild(root);
+	var clone = root.cloneNode(true);
+
+	var encoder = new MutationEncoder(root);
+	var patcher = new MutationPatcher(clone);
+
+	var mo = new MutationObserver(function(records) {
+		patcher.patch(encoder.encode(records));
+		assert.equal(clone.textContent, "A title", "Patched correctly");
+		done();
+	});
+
+	mo.observe(root, { childList: true, subtree: true, characterData: true });
+
+	var article = document.createElement("article");
+	article.appendChild(document.createTextNode("Article"));
+	parent.appendChild(article);
+
+	article.firstChild.nodeValue = "A title";
+});
