@@ -229,12 +229,20 @@ class MutationEncoder {
 					break;
 				case "characterData":
 					let node = record.target;
-					let parentIndex = index.for(record.target);
-					instructions.push([2, parentIndex, encodeCharacterMutation(node, parentIndex)]);
+					if(index.contains(node)) {
+						let parentIndex = index.for(node);
+						instructions.push([2, parentIndex,
+							encodeCharacterMutation(node, parentIndex)]);
+					}
+
 					break;
 				case "attributes": {
-					let parentIndex = index.for(record.target);
-					instructions.push([3, parentIndex, encodeAttributeMutation(record, parentIndex)]);
+					let node = record.target;
+					if(index.contains(node)) {
+						let parentIndex = index.for(record.target);
+						instructions.push([3, parentIndex,
+							encodeAttributeMutation(record, parentIndex)]);
+					}
 					break;
 				}
 			}
