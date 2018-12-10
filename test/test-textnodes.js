@@ -137,3 +137,27 @@ QUnit.test("Changing nodeValue before parent is inserted", function(assert) {
 
 	article.firstChild.nodeValue = "A title";
 });
+
+QUnit.test("Works with emojis", function(assert) {
+	var done = assert.async();
+
+	var root = document.createElement("div");
+	var parent = document.createElement("section");
+	parent.appendChild(document.createTextNode(""));
+	root.appendChild(parent);
+	helpers.fixture.el().appendChild(root);
+	var clone = root.cloneNode(true);
+
+	var encoder = new MutationEncoder(root);
+	var patcher = new MutationPatcher(clone);
+
+	var mo = new MutationObserver(function(records) {
+		patcher.patch(encoder.encode(records));
+		assert.equal(clone.firstChild.firstChild.nodeValue, "🏁", "emoji patched");
+		done();
+	});
+
+	mo.observe(root, { childList: true, subtree: true, characterData: true });
+
+	parent.firstChild.nodeValue = "🏁";
+});

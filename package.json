@@ -36,5 +36,8 @@
     "steal-qunit": "^1.0.1",
     "testee": "^0.7.0"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "utf8": "^3.0.0"
+  }
 }

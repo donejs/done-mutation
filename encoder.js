@@ -1,17 +1,26 @@
 const tags = require("./tags");
 const NodeIndex = require("./index");
 const walk = require("./walk");
+const utf8 = require("utf8");
 
 function* toUint8(n) {
 	yield ((n >> 8) & 0xff); // high
 	yield n & 0xff; // low
 }
 
-function* encodeString(text) {
-	for(let i = 0, len = text.length; i < len; i++) {
-		yield text.charCodeAt(i);
+function* stringToBytes(text) {
+	let enc = utf8.encode(text);
+	let i = 0, point;
+	while((point = enc.codePointAt(i)) !== undefined) {
+		yield point;
+		i++;
 	}
-	yield tags.Zero;
+}
+
+function* encodeString(text) {
+	let arr = Uint8Array.from(stringToBytes(text));
+	yield arr.length;
+	yield* arr;
 }
 
 function* encodeType(val) {

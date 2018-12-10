@@ -11,18 +11,15 @@ function toUint16(iter) {
 	return (((high & 255) << 8) | (low & 255));
 }
 
+const decoder = new TextDecoder();
+
 function decodeString(bytes) {
-	let string = "";
-	while(true) {
-		let { value } = bytes.next();
-		switch(value) {
-			case tags.Zero:
-				return string;
-			default:
-				string += String.fromCharCode(value);
-				break;
-		}
+	let len = bytes.next().value;
+	let array = new Uint8Array(len);
+	for(let i = 0; i < len; i++) {
+		array[i] = bytes.next().value;
 	}
+	return decoder.decode(array);
 }
 
 function decodeType(bytes) {
