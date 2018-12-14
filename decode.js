@@ -42,6 +42,8 @@ function decodeNode(bytes, nodeType, document) {
 			return document.createTextNode(decodeString(bytes));
 		case 1:
 			return decodeElement(bytes, document);
+		case 8:
+			return document.createComment(decodeString(bytes));
 		default:
 			throw new Error(`Unable to decode nodeType ${nodeType}`);
 	}
