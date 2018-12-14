@@ -704,3 +704,27 @@ QUnit.test("Element appended to parent before parent's insert occurs", function(
 	root.appendChild(parent);
 	label.appendChild(document.createTextNode("User"));
 });
+
+QUnit.test("Correctly encodes/decodes comment nodes", function(assert) {
+	var done = assert.async();
+
+	var doc = document.createElement("div");
+	var root = document.createElement("div");
+	doc.appendChild(root);
+	helpers.fixture.el().appendChild(doc);
+	var clone = doc.cloneNode(true);
+
+	var encoder = new MutationEncoder(doc);
+	var patcher = new MutationPatcher(clone);
+
+	var mo = new MutationObserver(function(records){
+		var bytes = encoder.encode(records);
+		patcher.patch(bytes);
+
+		assert.equal(clone.firstChild.firstChild.nodeValue, "hello world");
+		done();
+	});
+	mo.observe(root, { subtree: true, childList: true });
+
+	root.appendChild(document.createComment("hello world"));
+});

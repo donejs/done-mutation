@@ -68,6 +68,7 @@ function* encodeNode(node) {
 			yield* encodeElement(node);
 			break;
 		case 3:
+		case 8:
 			yield* encodeString(node.nodeValue);
 			break;
 		default:
