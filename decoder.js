@@ -2,68 +2,79 @@ const {
 	decodeString,
 	decodeNode,
 	decodeType,
-	toUint16
+	toUint16,
+	next
 } = require("./decode");
 const tags = require("./tags");
 
 class MutationDecoder {
 	constructor(document) {
 		this.document = document || window.document;
+		this._operation = null;
 	}
 
 	*decode(bytes) {
+		this.iter = toIterator(bytes);
 		const document = this.document;
-		let iter = toIterator(bytes);
 		let mutation;
 
-		for(let byte of iter) {
+		while(true) {
+			let result = this.iter.next();
+
+			if(result.done) {
+				break;
+			}
+
+			let byte = result.value;
 			let index, ref;
 
 			switch(byte) {
 				case tags.Zero:
 					break;
 				case tags.Insert:
-					index = toUint16(iter);
-					ref = toUint16(iter);
-					let nodeType = iter.next().value;
+					index = yield* toUint16(this);
+					ref = yield* toUint16(this);
+					let nodeType = yield* next(this);
 					mutation = {type: "insert", index, ref, nodeType};
-					mutation.node = decodeNode(iter, nodeType, document);
+					mutation.node = yield* decodeNode(this, nodeType, document);
 					yield mutation;
 					break;
 			  case tags.Move:
-					index = toUint16(iter);
-					let from = iter.next().value;
-					ref = iter.next().value;
+					index = yield* toUint16(this);
+					let from = yield* next(this);
+					ref = yield* next(this);
 					mutation = {type: "move", from, index, ref};
 					yield mutation;
 					break;
 				case tags.Remove:
-					index = toUint16(iter);
-					let child = toUint16(iter);
+					index = yield* toUint16(this);
+					let child = yield* toUint16(this);
 					mutation = {type: "remove", index, child};
 					yield mutation;
 					break;
 				case tags.Text:
-					index = toUint16(iter);
-					let value = decodeString(iter);
+					index = yield* toUint16(this);
+					let value = yield* decodeString(this);
 					mutation = {type: "text", index, value};
 					yield mutation;
 					break;
 				case tags.SetAttr:
-					index = toUint16(iter);
-					let attrName = decodeString(iter);
-					let newValue = decodeString(iter);
+					index = yield* toUint16(this);
+					let attrName = yield* decodeString(this);
+					let newValue = yield* decodeString(this);
 					mutation = {type: "set-attribute", index, attrName, newValue};
 					yield mutation;
 					break;
-				case tags.RemoveAttr:
-					index = toUint16(iter);
-					mutation = {type: "remove-attribute", index, attrName: decodeString(iter)};
+				case tags.RemoveAttr: {
+					index = yield* toUint16(this);
+					let attrName = yield* decodeString(this);
+					mutation = {type: "remove-attribute", index, attrName };
 					yield mutation;
 					break;
+				}
 				case tags.Prop:
-					index = toUint16(iter);
-					mutation = {type: "property", index, property: decodeString(iter), value: decodeType(iter)};
+					index = yield* toUint16(this);
+					mutation = {type: "property", index, property: yield* decodeString(this), value: yield* decodeType(this)};
 					yield mutation;
 					break;
 				default:
