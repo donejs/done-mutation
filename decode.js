@@ -4,67 +4,79 @@ exports.decodeNode = decodeNode;
 exports.decodeString = decodeString;
 exports.decodeType = decodeType;
 exports.toUint16 = toUint16;
+exports.next = next;
 
-function toUint16(iter) {
-	let high = iter.next().value;
-	let low = iter.next().value;
+function* next(context) {
+	let iter = context.iter;
+	let r = iter.next();
+	if(r.done) {
+		let bytes = yield;
+		context.iter = bytes[Symbol.iterator]();
+		return yield* next(context);
+	}
+	return r.value;
+}
+
+function* toUint16(iter) {
+	let high = yield* next(iter);
+	let low = yield* next(iter);
 	return (((high & 255) << 8) | (low & 255));
 }
 
 const decoder = new TextDecoder();
 
-function decodeString(bytes) {
-	let len = bytes.next().value;
+function* decodeString(bytes) {
+	let len = yield* next(bytes);
 	let array = new Uint8Array(len);
 	for(let i = 0; i < len; i++) {
-		array[i] = bytes.next().value;
+		array[i] = yield* next(bytes);
 	}
 	return decoder.decode(array);
 }
 
-function decodeType(bytes) {
-	let type = bytes.next().value;
+function* decodeType(bytes) {
+	let type = yield* next(bytes);
 	switch(type) {
 		case 1:
-			return Boolean(bytes.next().value);
+			return Boolean(yield* next(bytes));
 		case 2:
-			return Number(bytes.next().value);
+			return Number(yield* next(bytes));
 		case 3:
-			return decodeString(bytes);
+			return yield* decodeString(bytes);
 		default:
 			throw new Error(`The type ${type} is not recognized.`);
 	}
 }
 
-function decodeNode(bytes, nodeType, document) {
+function* decodeNode(bytes, nodeType, document) {
 	switch(nodeType) {
 		case 3:
-			return document.createTextNode(decodeString(bytes));
+			return document.createTextNode(yield* decodeString(bytes));
 		case 1:
-			return decodeElement(bytes, document);
+			return yield* decodeElement(bytes, document);
 		case 8:
-			return document.createComment(decodeString(bytes));
+			return document.createComment(yield* decodeString(bytes));
 		default:
 			throw new Error(`Unable to decode nodeType ${nodeType}`);
 	}
 }
 
-function decodeElement(bytes, document) {
-	let el = document.createElement(decodeString(bytes));
+function* decodeElement(bytes, document) {
+	let el = document.createElement(yield* decodeString(bytes));
 
-	let attributeName = decodeString(bytes);
+	let attributeName = yield* decodeString(bytes);
 	while(attributeName) {
-		let attributeValue = decodeString(bytes);
+		let attributeValue = yield* decodeString(bytes);
 		el.setAttribute(attributeName, attributeValue);
-		attributeName = decodeString(bytes);
+		attributeName = yield* decodeString(bytes);
 	}
 
 	let parent = el;
-	let nodeType = bytes.next().value;
+	let nodeType = yield* next(bytes);
 	while(nodeType !== tags.Zero) {
-		let el = decodeNode(bytes, nodeType, document);
+		let el = yield* decodeNode(bytes, nodeType, document);
 		parent.appendChild(el);
-		nodeType = bytes.next().value;
+		nodeType = yield* next(bytes);
 	}
 
 	return el;

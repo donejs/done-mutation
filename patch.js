@@ -1,5 +1,5 @@
 const {
-	decodeNode, decodeString, decodeType, toUint16
+	decodeNode, decodeString, decodeType, toUint16, next
 } = require("./decode");
 const tags = require("./tags");
 
@@ -39,6 +39,8 @@ class MutationPatcher {
 	constructor(root) {
 		this.root = root;
 		this._startWalker();
+		this._operation = null;
+		this._iter = null;
 	}
 
 	_startWalker() {
@@ -47,9 +49,74 @@ class MutationPatcher {
 	}
 
 	patch(bytes) {
-		const iter = bytes[Symbol.iterator]();
+		if(!this._operation) {
+			this._operation = this._patch(bytes);
+		}
+		this._operation.next(bytes);
+	}
+
+	*_patch(bytes) {
+		this.iter = bytes[Symbol.iterator]();
 		const root = this.root;
 		const document = getDocument(root);
+
+		while(true) {
+			let byte = yield* next(this);
+			let index, ref, node, child;
+
+			switch(byte) {
+				case tags.Zero:
+					break;
+				case tags.Insert:
+					index = yield* toUint16(this);
+					ref = yield* toUint16(this);
+					let nodeType = yield* next(this);
+					child = yield* decodeNode(this, nodeType, document);
+					let parent = this.walker.next(index).value;
+					let sibling = getChild(parent, ref);
+					parent.insertBefore(child, sibling);
+					break;
+				case tags.Remove:
+					index = yield* toUint16(this);
+					let childIndex = yield* toUint16(this);
+					let el = this.walker.next(index).value;
+					child = getChild(el, childIndex);
+					el.removeChild(child);
+					this._startWalker();
+					break;
+				case tags.Text: {}
+					index = yield* toUint16(this);
+					let nodeValue = yield* decodeString(this);
+					node = this.walker.next(index).value;
+					node.nodeValue = nodeValue;
+					break;
+				case tags.SetAttr:
+					index = yield* toUint16(this);
+					node = this.walker.next(index).value;
+					let attrName = yield* decodeString(this);
+					let attrValue = yield* decodeString(this);
+					node.setAttribute(attrName, attrValue);
+					break;
+				case tags.RemoveAttr:
+					index = yield* toUint16(this);
+					node = this.walker.next(index).value;
+					node.removeAttribute(yield* decodeString(this));
+					break;
+				case tags.Prop: {
+					index = yield* toUint16(this);
+					node = this.walker.next(index).value;
+					let propName = yield* decodeString(this);
+					let propValue = yield* decodeType(this);
+					node[propName] = propValue;
+				}
+
+					break;
+				default:
+					throw new Error(`The instruction ${byte} is not supported.`);
+			}
+		}
+
+		/*
 
 		for(let byte of iter) {
 			let index, ref, node, child;
@@ -58,49 +125,54 @@ class MutationPatcher {
 				case tags.Zero:
 					break;
 				case tags.Insert:
-					index = toUint16(iter);
-					ref = toUint16(iter);
-					let nodeType = iter.next().value;
-					child = decodeNode(iter, nodeType, document);
+					index = yield* toUint16(iter);
+					ref = yield* toUint16(iter);
+					let nodeType = yield* next(iter);
+					child = yield* decodeNode(iter, nodeType, document);
 					let parent = this.walker.next(index).value;
 					let sibling = getChild(parent, ref);
 					parent.insertBefore(child, sibling);
 					break;
 				case tags.Remove:
-					index = toUint16(iter);
-					let childIndex = toUint16(iter);
+					index = yield* toUint16(iter);
+					let childIndex = yield* toUint16(iter);
 					let el = this.walker.next(index).value;
 					child = getChild(el, childIndex);
 					el.removeChild(child);
 					this._startWalker();
 					break;
-				case tags.Text:
-					index = toUint16(iter);
-					let value = decodeString(iter);
+				case tags.Text: {}
+					index = yield* toUint16(iter);
+					let nodeValue = yield* decodeString(iter);
 					node = this.walker.next(index).value;
-					node.nodeValue = value;
+					node.nodeValue = nodeValue;
 					break;
 				case tags.SetAttr:
-					index = toUint16(iter);
+					index = yield* toUint16(iter);
 					node = this.walker.next(index).value;
-					let attrName = decodeString(iter);
-					let attrValue = decodeString(iter);
+					let attrName = yield* decodeString(iter);
+					let attrValue = yield* decodeString(iter);
 					node.setAttribute(attrName, attrValue);
 					break;
 				case tags.RemoveAttr:
-					index = toUint16(iter);
+					index = yield* toUint16(iter);
 					node = this.walker.next(index).value;
-					node.removeAttribute(decodeString(iter));
+					node.removeAttribute(yield* decodeString(iter));
 					break;
-				case tags.Prop:
-					index = toUint16(iter);
+				case tags.Prop: {
+					index = yield* toUint16(iter);
 					node = this.walker.next(index).value;
-					node[decodeString(iter)] = decodeType(iter);
+					let propName = yield* decodeString(iter);
+					let propValue = yield* decodeType(iter);
+					node[propName] = propValue;
+				}
+
 					break;
 				default:
 					throw new Error(`The instruction ${byte} is not supported.`);
 			}
 		}
+		*/
 	}
 }
 
