@@ -69,7 +69,7 @@ function* encodeNode(node) {
 			break;
 		case 3:
 		case 8:
-			yield* encodeString(node.nodeValue);
+			yield* encodeString(textValue(node));
 			break;
 		default:
 			throw new Error(`Cannot yet encode nodeType ${node.nodeType}`);
@@ -92,7 +92,7 @@ function* encodeAddedMutation(node, parentIndex, childIndex) {
 function* encodeCharacterMutation(node, parentIndex) {
 	yield tags.Text;
 	yield* toUint8(parentIndex);
-	yield* encodeString(node.nodeValue);
+	yield* encodeString(textValue(node));
 }
 
 function* encodeAttributeMutation(record, parentIndex) {
@@ -107,6 +107,10 @@ function* encodeAttributeMutation(record, parentIndex) {
 		yield* encodeString(record.attributeName);
 		yield* encodeString(attributeValue);
 	}
+}
+
+function textValue(node) {
+	return node.data != null ? node.data : node.nodeValue;
 }
 
 function sortMutations(a, b) {
