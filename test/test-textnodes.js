@@ -161,3 +161,29 @@ QUnit.test("Works with emojis", function(assert) {
 
 	parent.firstChild.nodeValue = "🏁";
 });
+
+QUnit.test("Setting .data", function(assert){
+	var done = assert.async();
+
+	var root = document.createElement("div");
+	var article = document.createElement("article");
+	article.appendChild(document.createTextNode("Article"));
+	root.appendChild(article);
+	helpers.fixture.el().appendChild(root);
+	var clone = root.cloneNode(true);
+
+	var encoder = new MutationEncoder(root);
+	var patcher = new MutationPatcher(clone);
+
+	var mo = new MutationObserver(function(records) {
+		patcher.patch(encoder.encode(records));
+		assert.equal(clone.textContent, "A title", "Patched correctly");
+		done();
+	});
+
+	mo.observe(root, { childList: true, subtree: true, characterData: true });
+	Object.defineProperty(article.firstChild, "nodeValue", {
+		value: undefined
+	});
+	article.firstChild.data = "A title";
+});
