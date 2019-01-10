@@ -570,7 +570,6 @@ QUnit.test("Applying changes to a full app load - incrementally", async function
 		var fullBytes = encoder.encode(records);
 
 		for(let bytes of chunk(fullBytes, 10)) {
-			console.log(bytes);
 			try {
 				patcher.patch(bytes);
 				assert.ok(true, "patch successful");
@@ -926,4 +925,35 @@ QUnit.test("Correctly encodes/decodes comment nodes", function(assert) {
 	mo.observe(root, { subtree: true, childList: true });
 
 	root.appendChild(document.createComment("hello world"));
+});
+
+QUnit.test("Encoding long strings", function(assert) {
+	var done = assert.async();
+
+	var doc = document.createElement("div");
+	var root = document.createElement("div");
+	doc.appendChild(root);
+	helpers.fixture.el().appendChild(doc);
+	var clone = doc.cloneNode(true);
+
+	var encoder = new MutationEncoder(doc);
+	var patcher = new MutationPatcher(clone);
+
+	var mo = new MutationObserver(function(records){
+		var bytes = encoder.encode(records);
+		patcher.patch(bytes);
+
+		var tn = clone.querySelector('.product-desc').firstChild;
+		assert.equal(tn.data, "New Classic – the classic, perfect retractable leash from flexi, featuring a stylish design and an ergonomic grip handle. It can be accessorized with Multi Box and LED Lighting System (for size S and up). With its innovative Short-Stroke Braking System, the New Classic creates a high level of safety and comfort during walks. The modern New Classic leashes are available as tape and cord models in sizes XS, S, M and M/L, each in red, blue, black or pink.",
+			"Contains the full string");
+		assert.ok(true);
+		done();
+	});
+	mo.observe(root, { subtree: true, childList: true });
+
+	let li = document.createElement("li");
+	li.setAttribute("id", "product-3");
+	li.innerHTML = '<aside><img class="product-image" src="https://images-na.ssl-images-amazon.com/images/I/61EYu9vPcQL._SL1500_.jpg" alt="The product"></aside><div class="product-info"><header><h1>Retractable Leash</h1></header><div class="product-desc">New Classic – the classic, perfect retractable leash from flexi, featuring a stylish design and an ergonomic grip handle. It can be accessorized with Multi Box and LED Lighting System (for size S and up). With its innovative Short-Stroke Braking System, the New Classic creates a high level of safety and comfort during walks. The modern New Classic leashes are available as tape and cord models in sizes XS, S, M and M/L, each in red, blue, black or pink.</div></div>';
+
+	root.appendChild(li);
 });
