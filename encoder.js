@@ -19,7 +19,7 @@ function* stringToBytes(text) {
 
 function* encodeString(text) {
 	let arr = Uint8Array.from(stringToBytes(text));
-	yield arr.length;
+	yield* toUint8(arr.length);
 	yield* arr;
 }
 
@@ -45,19 +45,24 @@ function* encodeElement(element) {
 	yield* encodeString(element.tagName.toLowerCase());
 
 	// Attributes
+	yield* toUint8(element.attributes.length);
 	for(let attribute of element.attributes) {
 		yield* encodeString(attribute.name);
 		yield* encodeString(attribute.value);
 	}
-	yield tags.Zero;
 
 	// Children
 	let child = element.firstChild;
-	while(child) {
-		yield* encodeNode(child);
-		child = child.nextSibling;
+	let hasChildren = !!child;
+	yield Number(hasChildren);
+
+	if(hasChildren) {
+		while(child) {
+			yield* encodeNode(child);
+			child = child.nextSibling;
+		}
+		yield tags.Zero; // End of children
 	}
-	yield tags.Zero; // End of children
 }
 
 function* encodeNode(node) {

@@ -26,7 +26,8 @@ function* toUint16(iter) {
 const decoder = new TextDecoder();
 
 function* decodeString(bytes) {
-	let len = yield* next(bytes);
+	let len = yield* toUint16(bytes);
+
 	let array = new Uint8Array(len);
 	for(let i = 0; i < len; i++) {
 		array[i] = yield* next(bytes);
@@ -64,19 +65,22 @@ function* decodeNode(bytes, nodeType, document) {
 function* decodeElement(bytes, document) {
 	let el = document.createElement(yield* decodeString(bytes));
 
-	let attributeName = yield* decodeString(bytes);
-	while(attributeName) {
+	let attributeCount = yield* toUint16(bytes);
+	for(let i = 0; i < attributeCount; i++) {
+		let attributeName = yield* decodeString(bytes);
 		let attributeValue = yield* decodeString(bytes);
 		el.setAttribute(attributeName, attributeValue);
-		attributeName = yield* decodeString(bytes);
 	}
 
 	let parent = el;
-	let nodeType = yield* next(bytes);
-	while(nodeType !== tags.Zero) {
-		let el = yield* decodeNode(bytes, nodeType, document);
-		parent.appendChild(el);
-		nodeType = yield* next(bytes);
+	let hasChildren = yield* next(bytes);
+	if(hasChildren) {
+		let nodeType = yield* next(bytes);
+		while(nodeType !== tags.Zero) {
+			let el = yield* decodeNode(bytes, nodeType, document);
+			parent.appendChild(el);
+			nodeType = yield* next(bytes);
+		}
 	}
 
 	return el;
