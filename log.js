@@ -1,14 +1,22 @@
 const MutationEncoder = require("./encoder");
 const MutationDecoder = require("./decoder");
 
-exports.instructions = function(bytes) {
-	let decoder = new MutationDecoder(document);
-	console.group("Mutations");
-	for(let mutation of decoder.decode(bytes)) {
-		console.log(mutation);
+class Logger {
+	constructor() {
+		this._decoder = new MutationDecoder(document);
 	}
-	console.groupEnd();
-};
+
+	mutations(bytes) {
+		let decoder = this._decoder;
+		console.group("Mutations");
+		for(let mutation of decoder.decode(bytes)) {
+			console.log(mutation);
+		}
+		console.groupEnd();
+	}
+}
+
+exports.Logger = Logger;
 
 exports.element = function(root, options) {
 	let encoder = new MutationEncoder(root, options);
@@ -26,4 +34,10 @@ exports.element = function(root, options) {
 	let mo = new MutationObserver(callback);
 	mo.observe(root, { subtree: true, characterData: true, childList: true, attributes: true });
 	return mo;
+};
+
+exports.instructions = function(bytes) {
+	console.warn("log.instructions is deprecated. Use log.Logger instead.");
+	let log = new Logger();
+	log.mutations(bytes);
 };
