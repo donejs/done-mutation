@@ -545,6 +545,7 @@ QUnit.test("Applying changes to a full app load - incrementally", async function
 
 	var encoder = new MutationEncoder(root);
 	var patcher = new MutationPatcher(clone);
+	var decoder = new MutationDecoder(root.ownerDocument);
 
 	function* chunk(bytes, count) {
 		var len = bytes.length, l = -1;
@@ -571,6 +572,10 @@ QUnit.test("Applying changes to a full app load - incrementally", async function
 
 		for(let bytes of chunk(fullBytes, 10)) {
 			try {
+				for(let value of decoder.decode(bytes)) {
+					assert.ok(value, "got some logging info");
+				}
+
 				patcher.patch(bytes);
 				assert.ok(true, "patch successful");
 			} catch(err) {

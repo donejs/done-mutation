@@ -40,7 +40,6 @@ class MutationPatcher {
 		this.root = root;
 		this._startWalker();
 		this._operation = null;
-		this._iter = null;
 	}
 
 	_startWalker() {
@@ -115,64 +114,6 @@ class MutationPatcher {
 					throw new Error(`The instruction ${byte} is not supported.`);
 			}
 		}
-
-		/*
-
-		for(let byte of iter) {
-			let index, ref, node, child;
-
-			switch(byte) {
-				case tags.Zero:
-					break;
-				case tags.Insert:
-					index = yield* toUint16(iter);
-					ref = yield* toUint16(iter);
-					let nodeType = yield* next(iter);
-					child = yield* decodeNode(iter, nodeType, document);
-					let parent = this.walker.next(index).value;
-					let sibling = getChild(parent, ref);
-					parent.insertBefore(child, sibling);
-					break;
-				case tags.Remove:
-					index = yield* toUint16(iter);
-					let childIndex = yield* toUint16(iter);
-					let el = this.walker.next(index).value;
-					child = getChild(el, childIndex);
-					el.removeChild(child);
-					this._startWalker();
-					break;
-				case tags.Text: {}
-					index = yield* toUint16(iter);
-					let nodeValue = yield* decodeString(iter);
-					node = this.walker.next(index).value;
-					node.nodeValue = nodeValue;
-					break;
-				case tags.SetAttr:
-					index = yield* toUint16(iter);
-					node = this.walker.next(index).value;
-					let attrName = yield* decodeString(iter);
-					let attrValue = yield* decodeString(iter);
-					node.setAttribute(attrName, attrValue);
-					break;
-				case tags.RemoveAttr:
-					index = yield* toUint16(iter);
-					node = this.walker.next(index).value;
-					node.removeAttribute(yield* decodeString(iter));
-					break;
-				case tags.Prop: {
-					index = yield* toUint16(iter);
-					node = this.walker.next(index).value;
-					let propName = yield* decodeString(iter);
-					let propValue = yield* decodeType(iter);
-					node[propName] = propValue;
-				}
-
-					break;
-				default:
-					throw new Error(`The instruction ${byte} is not supported.`);
-			}
-		}
-		*/
 	}
 }
 

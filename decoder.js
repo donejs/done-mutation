@@ -14,18 +14,28 @@ class MutationDecoder {
 	}
 
 	*decode(bytes) {
+		if(!this._operation) {
+			this._operation = this._decode(bytes);
+		}
+
+		while(true) {
+			let { done, value } = this._operation.next(bytes);
+
+			if(done || !value) {
+				return;
+			}
+
+			yield value;
+		}
+	}
+
+	*_decode(bytes) {
 		this.iter = toIterator(bytes);
 		const document = this.document;
 		let mutation;
 
 		while(true) {
-			let result = this.iter.next();
-
-			if(result.done) {
-				break;
-			}
-
-			let byte = result.value;
+			let byte = yield* next(this);
 			let index, ref;
 
 			switch(byte) {
